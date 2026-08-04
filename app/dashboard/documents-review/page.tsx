@@ -82,14 +82,7 @@ export default function DocumentsReviewPage() {
               iconBgColor="bg-rose-50"
               iconColor="text-rose-500"
             />
-            <StatsCard 
-              title="Average Review Time" 
-              value="2h 45m" 
-              subtext="This Month"
-              icon={ClockIcon}
-              iconBgColor="bg-blue-50"
-              iconColor="text-blue-600"
-            />
+            {/* z */}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

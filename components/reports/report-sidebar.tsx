@@ -48,7 +48,7 @@ export function ReportInvestigationSidebar() {
               <p className="text-[10px] font-bold uppercase tracking-widest">Report Details</p>
             </div>
             <p className="text-xs text-white/80 leading-relaxed italic">
-              "The seller sent me a message outside of the Phsar Digital app asking for a direct bank transfer instead of using the platform's secure payment gateway. When I refused, they threatened to cancel my order for the high-end gaming laptop."
+              &quot;The seller sent me a message outside of the Phsar Digital app asking for a direct bank transfer instead of using the platform&apos;s secure payment gateway. When I refused, they threatened to cancel my order for the high-end gaming laptop.&quot;
             </p>
           </div>
 
@@ -78,17 +78,17 @@ export function ReportInvestigationSidebar() {
             </div>
             <div className="space-y-4 pl-3 border-l border-white/20">
               <div className="relative">
-                <div className="absolute -left-[16px] top-1 size-2 rounded-full bg-white" />
+                <div className="absolute -left-4 top-1 size-2 rounded-full bg-white" />
                 <p className="text-[9px] font-bold">Report Submitted</p>
                 <p className="text-[8px] text-white/50">Oct 24, 09:12 AM</p>
               </div>
               <div className="relative opacity-60">
-                <div className="absolute -left-[16px] top-1 size-2 rounded-full bg-white/50" />
+                <div className="absolute -left-4 top-1 size-2 rounded-full bg-white/50" />
                 <p className="text-[9px] font-bold">Automated Risk Analysis</p>
                 <p className="text-[8px] text-white/50">Oct 24, 09:15 AM</p>
               </div>
               <div className="relative">
-                <div className="absolute -left-[16px] top-1 size-2 rounded-full bg-white shadow-[0_0_8px_white]" />
+                <div className="absolute -left-4 top-1 size-2 rounded-full bg-white shadow-[0_0_8px_white]" />
                 <p className="text-[9px] font-bold">Investigation Started</p>
                 <p className="text-[8px] text-white/50">Oct 24, 10:00 AM by Admin_Dara</p>
               </div>

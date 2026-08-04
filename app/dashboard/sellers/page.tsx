@@ -1,3 +1,5 @@
+"use client"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { StatsCard } from "@/components/dashboard/stats-card"
@@ -20,159 +22,7 @@ import {
   StoreIcon,
 } from "lucide-react"
 
-const sellers = [
-  {
-    id: "S-10001",
-    name: "Tech Store Cambodia",
-    store: "techstore",
-    email: "techstore@gmail.com",
-    phone: "+855 12 456 678",
-    verification: "Verified Pro",
-    plan: "Business",
-    listings: 120,
-    rating: 4.8,
-    reviews: 38,
-    sales: "$8,450.75",
-    status: "ACTIVE",
-    avatar: "/avatars/admin.jpg",
-    selected: true,
-  },
-  {
-    id: "S-10002",
-    name: "Phone World",
-    store: "phoneworld",
-    email: "phoneworld@gmail.com",
-    phone: "+855 10 987 654",
-    verification: "Verified Pro",
-    plan: "Pro",
-    listings: 85,
-    rating: 4.6,
-    reviews: 14,
-    sales: "$6,215.40",
-    status: "ACTIVE",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10003",
-    name: "Siem Reap Property",
-    store: "srproperty",
-    email: "srproperty@gmail.com",
-    phone: "+855 17 765 432",
-    verification: "Pending",
-    plan: "Basic",
-    listings: 18,
-    rating: null,
-    reviews: null,
-    sales: "$0.00",
-    status: "PENDING",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10004",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10005",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10006",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10007",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10008",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10009",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-  {
-    id: "S-10010",
-    name: "Creative Stuff",
-    store: "#S-10008",
-    email: "creativestuff@gmail.com",
-    phone: "+855 15 777 888",
-    verification: "Suspended",
-    plan: "Pro",
-    listings: 30,
-    rating: 2.6,
-    reviews: 8,
-    sales: "$120.00",
-    status: "SUSPENDED",
-    avatar: "/avatars/admin.jpg",
-  },
-]
+import { useGetSellersQuery, type SellerRecord } from "@/lib/features/marketplace/marketplaceApi"
 
 function SellerFilters() {
   return (
@@ -207,7 +57,34 @@ function SellerFilters() {
   )
 }
 
-function SellerTable() {
+function SellerTable({ sellers, isLoading }: { sellers: SellerRecord[]; isLoading?: boolean }) {
+  const getVerificationBadge = (verification: string) => {
+    if (verification.toLowerCase().includes("verified")) {
+      return (
+        <Badge variant="success" className="gap-1.5 font-bold text-[10px]">
+          <BadgeCheckIcon className="size-3.5" />
+          {verification}
+        </Badge>
+      )
+    }
+
+    if (verification.toLowerCase().includes("pending")) {
+      return (
+        <Badge variant="warning" className="gap-1.5 font-bold text-[10px]">
+          <AlertCircleIcon className="size-3.5" />
+          {verification}
+        </Badge>
+      )
+    }
+
+    return (
+      <Badge variant="error" className="gap-1.5 font-bold text-[10px]">
+        <BanIcon className="size-3.5" />
+        {verification}
+      </Badge>
+    )
+  }
+
   return (
     <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -229,19 +106,26 @@ function SellerTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {sellers.map((seller) => (
+            {isLoading && sellers.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="p-6 text-sm text-gray-400">
+                  Loading sellers...
+                </td>
+              </tr>
+            ) : sellers.length ? sellers.map((seller) => (
               <tr key={seller.id} className="transition-colors hover:bg-gray-50/80">
                 <td className="p-6">
                   <input
                     type="checkbox"
-                    defaultChecked={seller.selected}
+                    checked={Boolean(seller.selected)}
+                    readOnly
                     className="size-4 rounded border-gray-300 text-[#6338f6] focus:ring-[#6338f6]"
                   />
                 </td>
                 <td className="p-6">
                   <div className="flex items-center gap-3">
                     <Avatar className="size-10">
-                      <AvatarImage src={seller.avatar} />
+                      <AvatarImage src={seller.avatar ?? undefined} />
                       <AvatarFallback>{seller.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -255,22 +139,7 @@ function SellerTable() {
                   <p className="text-xs text-gray-400">{seller.phone}</p>
                 </td>
                 <td className="p-6">
-                  {seller.verification === "Verified Pro" ? (
-                    <Badge variant="success" className="gap-1.5 font-bold text-[10px]">
-                      <BadgeCheckIcon className="size-3.5" />
-                      {seller.verification}
-                    </Badge>
-                  ) : seller.verification === "Pending" ? (
-                    <Badge variant="warning" className="gap-1.5 font-bold text-[10px]">
-                      <AlertCircleIcon className="size-3.5" />
-                      {seller.verification}
-                    </Badge>
-                  ) : (
-                    <Badge variant="error" className="gap-1.5 font-bold text-[10px]">
-                      <BanIcon className="size-3.5" />
-                      {seller.verification}
-                    </Badge>
-                  )}
+                  {getVerificationBadge(seller.verification)}
                 </td>
                 <td className="p-6">
                   <Badge variant="outline" className="rounded-full border-0 bg-violet-50 px-3 py-1 text-[10px] font-bold text-violet-600">
@@ -291,9 +160,9 @@ function SellerTable() {
                 </td>
                 <td className="p-6 text-sm font-semibold text-gray-900">{seller.sales}</td>
                 <td className="p-6">
-                  {seller.status === "ACTIVE" ? (
+                  {seller.status.toUpperCase() === "ACTIVE" ? (
                     <Badge variant="success" className="text-[10px] font-bold">ACTIVE</Badge>
-                  ) : seller.status === "PENDING" ? (
+                  ) : seller.status.toUpperCase() === "PENDING" ? (
                     <Badge variant="warning" className="text-[10px] font-bold">PENDING</Badge>
                   ) : (
                     <Badge variant="error" className="text-[10px] font-bold">SUSPENDED</Badge>
@@ -305,14 +174,20 @@ function SellerTable() {
                   </button>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={10} className="p-6 text-sm text-gray-400">
+                  No sellers found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="flex items-center justify-between border-t border-gray-50 p-6">
         <p className="text-sm text-gray-400">
-          Showing <span className="font-medium text-gray-900">1 to 10</span> of <span className="font-medium text-gray-900">4,209</span> sellers
+          Showing <span className="font-medium text-gray-900">1 to {Math.min(10, sellers.length || 10)}</span> of <span className="font-medium text-gray-900">{sellers.length.toLocaleString()}</span> sellers
         </p>
 
         <div className="flex items-center gap-2">
@@ -331,6 +206,13 @@ function SellerTable() {
 }
 
 export default function SellersPage() {
+  const { data: sellers = [], isLoading, isError, refetch } = useGetSellersQuery()
+
+  const verifiedSellers = sellers.filter((seller) => seller.verification.toLowerCase().includes("verified"))
+  const pendingSellers = sellers.filter((seller) => seller.verification.toLowerCase().includes("pending"))
+  const suspendedSellers = sellers.filter((seller) => seller.status.toUpperCase() === "SUSPENDED")
+  const bannedSellers = sellers.filter((seller) => seller.status.toUpperCase() === "BANNED")
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -346,35 +228,41 @@ export default function SellersPage() {
         </DashboardHeader>
 
         <div className="space-y-8 p-8">
+          {isError && (
+            <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+              Failed to load sellers. <button className="font-semibold underline" onClick={() => refetch()} type="button">Retry</button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
             <StatsCard
               title="Total Sellers"
-              value="4,209"
-              trend="15.7% vs last week"
+              value={isLoading ? "..." : sellers.length.toLocaleString()}
+              trend="Live from API"
               icon={StoreIcon}
               iconBgColor="bg-indigo-50"
               iconColor="text-indigo-600"
             />
             <StatsCard
               title="Verified Sellers"
-              value="2,835"
-              trend="12.4% vs last week"
+              value={isLoading ? "..." : verifiedSellers.length.toLocaleString()}
+              trend="Live from API"
               icon={CheckCircle2Icon}
               iconBgColor="bg-blue-50"
               iconColor="text-blue-600"
             />
             <StatsCard
               title="Pending Verification"
-              value="326"
-              trend="3.8% vs last week"
+              value={isLoading ? "..." : pendingSellers.length.toLocaleString()}
+              trend="Live from API"
               icon={AlertCircleIcon}
               iconBgColor="bg-orange-50"
               iconColor="text-orange-600"
             />
             <StatsCard
               title="Suspended Sellers"
-              value="38"
-              trend="2.1% vs last week"
+              value={isLoading ? "..." : suspendedSellers.length.toLocaleString()}
+              trend="Live from API"
               trendType="down"
               icon={AlertTriangleIcon}
               iconBgColor="bg-rose-50"
@@ -382,8 +270,8 @@ export default function SellersPage() {
             />
             <StatsCard
               title="Banned Sellers"
-              value="10"
-              trend="1.0% vs last week"
+              value={isLoading ? "..." : bannedSellers.length.toLocaleString()}
+              trend="Live from API"
               trendType="down"
               icon={BanIcon}
               iconBgColor="bg-red-50"
@@ -393,7 +281,7 @@ export default function SellersPage() {
 
           <div className="space-y-6">
             <SellerFilters />
-            <SellerTable />
+            <SellerTable sellers={sellers} isLoading={isLoading} />
           </div>
         </div>
       </SidebarInset>

@@ -19,7 +19,7 @@ const purchases = [
 ]
 
 export function PurchaseTable() {
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): React.ComponentProps<typeof Badge>["variant"] => {
     switch (status) {
       case 'Shipped': return 'info'
       case 'Processing': return 'warning'
@@ -75,7 +75,7 @@ export function PurchaseTable() {
                 <td className="p-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">{order.method}</td>
                 <td className="p-6">
                   <Badge 
-                    variant={getStatusVariant(order.status) as any}
+                    variant={getStatusVariant(order.status)}
                     className="rounded-lg text-[10px] px-3 py-1 font-bold shadow-sm"
                   >
                     {order.status}

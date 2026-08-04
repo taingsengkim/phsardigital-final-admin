@@ -120,7 +120,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="none" className="border-none bg-[#6338f6] text-white" {...props}>
+    <Sidebar collapsible="none" className="border-none bg-[#6338f6] text-white h-full" {...props}>
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-xl bg-white overflow-hidden">

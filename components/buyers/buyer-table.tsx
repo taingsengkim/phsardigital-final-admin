@@ -1,124 +1,16 @@
+"use client"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { MoreHorizontalIcon } from "lucide-react"
+import type { BuyerRecord } from "@/lib/features/marketplace/marketplaceApi"
 
-const buyers = [
-  {
-    id: "B-10001",
-    name: "Dara Kim",
-    email: "dara.kim@gmail.com",
-    phone: "+855 12 345 678",
-    status: "ACTIVE",
-    joinDate: "May 18, 2025",
-    joinTime: "10:30 AM",
-    totalOrders: 12,
-    totalSpent: "$1,240.50",
-    avatar: "/avatars/dara.jpg",
-    selected: true,
-  },
-  {
-    id: "B-10002",
-    name: "Sokchea Nhem",
-    email: "sokchea@gmail.com",
-    phone: "+855 10 987 654",
-    status: "ACTIVE",
-    joinDate: "May 17, 2025",
-    totalOrders: 8,
-    totalSpent: "$880.00",
-    avatar: "/avatars/sokchea.jpg",
-  },
-  {
-    id: "B-10004",
-    name: "Visal Keo",
-    email: "visal.keo@gmail.com",
-    phone: "+855 12 654 321",
-    status: "SUSPENDED",
-    joinDate: "May 15, 2025",
-    totalOrders: 3,
-    totalSpent: "$210.30",
-    avatar: "/avatars/visal.jpg",
-  },
-  {
-    id: "B-10005",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-  // Adding more mock data to match the image
-  {
-    id: "B-10006",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-  {
-    id: "B-10007",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-  {
-    id: "B-10008",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-  {
-    id: "B-10009",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-  {
-    id: "B-10010",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-  {
-    id: "B-10011",
-    name: "Thyda Marady",
-    email: "marady.thyda@gmail.com",
-    phone: "+855 97 765 432",
-    status: "BANNED",
-    joinDate: "May 12, 2025",
-    totalOrders: 0,
-    totalSpent: "$0.00",
-    avatar: "/avatars/thyda.jpg",
-  },
-]
+interface BuyerTableProps {
+  buyers: BuyerRecord[]
+  isLoading?: boolean
+}
 
-export function BuyerTable() {
+export function BuyerTable({ buyers, isLoading }: BuyerTableProps) {
   return (
     <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
@@ -139,12 +31,19 @@ export function BuyerTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {buyers.map((buyer) => (
+            {isLoading && buyers.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="p-6 text-sm text-gray-400">
+                  Loading buyers...
+                </td>
+              </tr>
+            ) : buyers.length ? buyers.map((buyer) => (
               <tr key={buyer.id} className="hover:bg-gray-50 transition-colors">
                 <td className="p-6">
                   <input 
                     type="checkbox" 
-                    checked={buyer.selected}
+                    checked={Boolean(buyer.selected)}
+                    readOnly
                     className="size-4 rounded border-gray-300 text-[#6338f6] focus:ring-[#6338f6]" 
                   />
                 </td>
@@ -185,14 +84,20 @@ export function BuyerTable() {
                   </button>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={9} className="p-6 text-sm text-gray-400">
+                  No buyers found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
       
       <div className="p-6 flex items-center justify-between border-t border-gray-50">
         <p className="text-sm text-gray-400">
-          Showing <span className="text-gray-900 font-medium">1 to 10</span> of <span className="text-gray-900 font-medium">24,385</span> buyers
+          Showing <span className="text-gray-900 font-medium">1 to {Math.min(10, buyers.length || 10)}</span> of <span className="text-gray-900 font-medium">{buyers.length.toLocaleString()}</span> buyers
         </p>
         
         <div className="flex items-center gap-2">

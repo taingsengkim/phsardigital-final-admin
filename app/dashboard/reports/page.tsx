@@ -67,7 +67,7 @@ export default function ReportsPage() {
               iconBgColor="bg-white"
               iconColor="text-[#6338f6]"
             />
-            <StatsCard 
+            {/* <StatsCard 
               title="Resolved" 
               value="1,150" 
               trend="+ 85%"
@@ -75,7 +75,7 @@ export default function ReportsPage() {
               icon={CheckCircle2Icon}
               iconBgColor="bg-white"
               iconColor="text-[#6338f6]"
-            />
+            /> */}
             <StatsCard 
               title="Fraud Flags" 
               value="18" 
@@ -92,7 +92,7 @@ export default function ReportsPage() {
               iconBgColor="bg-white"
               iconColor="text-gray-400"
             />
-            <StatsCard 
+            {/* <StatsCard 
               title="Avg. Resolution" 
               value="4.2h" 
               trend="- 15%"
@@ -100,7 +100,7 @@ export default function ReportsPage() {
               icon={ClockIcon}
               iconBgColor="bg-white"
               iconColor="text-[#6338f6]"
-            />
+            /> */}
           </div>
 
           <div className="flex items-center justify-between">

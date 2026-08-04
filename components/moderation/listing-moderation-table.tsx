@@ -1,24 +1,17 @@
 "use client"
 
-import { SearchIcon, ChevronDownIcon, MoreVerticalIcon } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { ChevronDownIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import Image from "next/image"
+import type { ListingRecord } from "@/lib/features/marketplace/marketplaceApi"
 
-const listings = [
-  { id: 1, name: "iPhone 15 Pro Max", status: "Flagged for Review", seller: "Apple Center KH", category: "Electronics", price: "$1,150.00", submitted: "2m ago", live: true },
-  { id: 2, name: "Luxury Condo BKK1", status: "Flagged for Review", seller: "Urban Living Co.", category: "Real Estate", price: "$245,000", submitted: "15m ago", live: true },
-  { id: 3, name: "BMW M4 Competition", status: "Flagged for Review", seller: "Sok Auto Imports", category: "Automotive", price: "$128,000", submitted: "42m ago", live: true },
-  { id: 4, name: "Limited Nike SB Dunk", status: "Flagged for Review", seller: "Sole Hunter", category: "Fashion", price: "$450.00", submitted: "1h ago", live: true },
-  { id: 5, name: "Samsung Galaxy S24 U", status: "Flagged for Review", seller: "Global Tech", category: "Electronics", price: "$1,099.00", submitted: "2h ago", live: true },
-  { id: 6, name: "Modern Office Desk", status: "Flagged for Review", seller: "WorkSpace Pro", category: "Furniture", price: "$350.00", submitted: "3h ago", live: true },
-  { id: 7, name: "Sony WH-1000XM5", status: "Flagged for Review", seller: "Sound & Vision", category: "Electronics", price: "$399.00", submitted: "4h ago", live: true },
-  { id: 8, name: "Professional DSLR Cam", status: "Flagged for Review", seller: "Focus Studio", category: "Photography", price: "$2,100.00", submitted: "5h ago", live: true },
-  { id: 9, name: "Men's Leather Boots", status: "Flagged for Review", seller: "Urban Style", category: "Fashion", price: "$145.00", submitted: "6h ago", live: true },
-  { id: 10, name: "Electric Scooter X1", status: "Flagged for Review", seller: "EcoDrive KH", category: "Vehicles", price: "$850.00", submitted: "7h ago", live: true },
-]
+interface ListingModerationTableProps {
+  listings: ListingRecord[]
+  isLoading?: boolean
+  selectedListingId?: string | null
+  onSelectListing?: (listingId: string) => void
+}
 
-export function ListingModerationTable() {
+export function ListingModerationTable({ listings, isLoading, selectedListingId, onSelectListing }: ListingModerationTableProps) {
   return (
     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="p-8 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -51,12 +44,26 @@ export function ListingModerationTable() {
             </tr>
           </thead>
           <tbody>
-            {listings.map((item) => (
-              <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer">
+            {isLoading && listings.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-8 py-8 text-sm text-gray-400">
+                  Loading listings...
+                </td>
+              </tr>
+            ) : listings.length ? listings.map((item) => (
+              <tr
+                key={item.id}
+                onClick={() => onSelectListing?.(item.id)}
+                className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer ${selectedListingId === item.id ? "bg-gray-50/70" : ""}`}
+              >
                 <td className="px-8 py-4">
                   <div className="flex items-center gap-4">
-                    <div className="size-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 relative">
-                      <div className="absolute inset-0 bg-gray-900/5 group-hover:bg-transparent transition-colors" />
+                    <div className="size-12 shrink-0 rounded-xl bg-gray-100 overflow-hidden relative">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} className="size-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 bg-gray-900/5 group-hover:bg-transparent transition-colors" />
+                      )}
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">{item.name}</p>
@@ -77,16 +84,24 @@ export function ListingModerationTable() {
                   {item.submitted}
                 </td>
                 <td className="px-8 py-4 text-right">
-                  <Badge variant="success" className="rounded-lg px-3 py-1 text-[10px]">Live</Badge>
+                  <Badge variant={item.live ? "success" : "warning"} className="rounded-lg px-3 py-1 text-[10px]">
+                    {item.live ? "Live" : "Hidden"}
+                  </Badge>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={6} className="px-8 py-8 text-sm text-gray-400">
+                  No listings found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="p-6 border-t border-gray-50 flex items-center justify-between">
-        <p className="text-xs text-gray-400 font-medium">Showing 1-10 of 184</p>
+        <p className="text-xs text-gray-400 font-medium">Showing 1-{Math.min(10, listings.length || 10)} of {listings.length.toLocaleString()}</p>
         <div className="flex items-center gap-2">
           <button className="size-8 rounded-lg flex items-center justify-center border border-gray-100 text-gray-400 hover:bg-gray-50 transition-colors">&lt;</button>
           <button className="size-8 rounded-lg flex items-center justify-center bg-[#6338f6] text-white text-xs font-bold">1</button>

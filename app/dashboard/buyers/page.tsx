@@ -1,3 +1,5 @@
+"use client"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -15,8 +17,15 @@ import {
   DownloadIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useGetBuyersQuery } from "@/lib/features/marketplace/marketplaceApi"
 
 export default function BuyersPage() {
+  const { data: buyers = [], isLoading, isError, refetch } = useGetBuyersQuery()
+
+  const activeBuyers = buyers.filter((buyer) => buyer.status.toLowerCase() === "active")
+  const suspendedBuyers = buyers.filter((buyer) => buyer.status.toLowerCase() === "suspended")
+  const bannedBuyers = buyers.filter((buyer) => buyer.status.toLowerCase() === "banned")
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -32,28 +41,34 @@ export default function BuyersPage() {
         </DashboardHeader>
         
         <div className="p-8 space-y-8">
+          {isError && (
+            <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+              Failed to load buyers. <button className="font-semibold underline" onClick={() => refetch()} type="button">Retry</button>
+            </div>
+          )}
+
           {/* Stats Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard 
               title="Total Buyers" 
-              value="24,385" 
-              trend="8.3% vs last week" 
+              value={isLoading ? "..." : buyers.length.toLocaleString()} 
+              trend="Live from API" 
               icon={UsersIcon}
               iconBgColor="bg-blue-50"
               iconColor="text-blue-600"
             />
             <StatsCard 
               title="Active Buyers" 
-              value="22,145" 
-              trend="6.7% vs last week" 
+              value={isLoading ? "..." : activeBuyers.length.toLocaleString()} 
+              trend="Live from API" 
               icon={CheckCircleIcon}
               iconBgColor="bg-emerald-50"
               iconColor="text-emerald-500"
             />
             <StatsCard 
               title="Suspended Buyers" 
-              value="198" 
-              trend="2.1% vs last week" 
+              value={isLoading ? "..." : suspendedBuyers.length.toLocaleString()} 
+              trend="Live from API" 
               trendType="down"
               icon={AlertTriangleIcon}
               iconBgColor="bg-amber-50"
@@ -61,8 +76,8 @@ export default function BuyersPage() {
             />
             <StatsCard 
               title="Banned Buyers" 
-              value="42" 
-              trend="1.3% vs last week" 
+              value={isLoading ? "..." : bannedBuyers.length.toLocaleString()} 
+              trend="Live from API" 
               trendType="down"
               icon={BanIcon}
               iconBgColor="bg-rose-50"
@@ -73,7 +88,7 @@ export default function BuyersPage() {
           {/* Filters and Table Container */}
           <div>
             <BuyerFilters />
-            <BuyerTable />
+            <BuyerTable buyers={buyers} isLoading={isLoading} />
           </div>
         </div>
       </SidebarInset>
