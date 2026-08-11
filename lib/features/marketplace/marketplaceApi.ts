@@ -46,7 +46,7 @@ export interface ListingRecord {
   description: string
 }
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API ?? "").replace(/\/$/, "")
+const apiBaseUrl = (process.env.NEXT_PUBLIC_API ?? "/api").replace(/\/$/, "")
 
 function toText(value: unknown, fallback = "") {
   if (typeof value === "string") {
@@ -260,7 +260,24 @@ export const marketplaceApi = createApi({
               ]
             : [{ type: "Listings" as const, id: "LIST" }],
       }),
+      updateListing: builder.mutation<ListingRecord, { id: string; data: Partial<ListingRecord> }>({
+        query: ({ id, data }) => ({
+          url: `/listings/${id}`,
+          method: "PATCH",
+          body: data,
+        }),
+        transformResponse: (response: unknown) => {
+          const normalized = normalizeList(response, normalizeListing)
+          return normalized[0] ?? normalizeListing(response)
+        },
+        invalidatesTags: [{ type: "Listings", id: "LIST" }],
+      }),
   }),
 })
 
-  export const { useGetBuyersQuery, useGetSellersQuery, useGetListingsQuery } = marketplaceApi
+export const { 
+  useGetBuyersQuery, 
+  useGetSellersQuery, 
+  useGetListingsQuery,
+  useUpdateListingMutation 
+} = marketplaceApi

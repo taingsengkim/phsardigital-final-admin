@@ -30,7 +30,7 @@ export default function RootLayout({
               "font-sans"
           )}
       >
-      <body className="min-h-full flex flex-col">
+      <body className="h-full overflow-hidden flex flex-col">
       <StoreProvider>
         <TooltipProvider>{children}</TooltipProvider>
       </StoreProvider>

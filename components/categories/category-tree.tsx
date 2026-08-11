@@ -70,16 +70,30 @@ export function CategoryHierarchy({ nodes, selectedId, onSelect }: CategoryHiera
     )
   }
 
+  const [showTree, setShowTree] = useState(false)
+
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm h-full">
-      <div className="flex items-center justify-between mb-8">
+    <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+      <div className={cn("flex items-center justify-between", showTree && "mb-6")}>
         <h4 className="font-bold text-gray-900">Hierarchy Tree</h4>
-        <button className="text-xs font-semibold text-[#6338f6] hover:underline" type="button" onClick={expandAll}>
-          Expand All
-        </button>
+        <div className="flex items-center gap-4">
+          {showTree && (
+            <button className="text-xs font-semibold text-gray-500 hover:underline" type="button" onClick={expandAll}>
+              Expand All
+            </button>
+          )}
+          <button 
+            className="text-xs font-semibold text-[#6338f6] hover:underline bg-purple-50 px-3 py-1.5 rounded-lg transition-colors" 
+            type="button" 
+            onClick={() => setShowTree(!showTree)}
+          >
+            {showTree ? "Hide Tree" : "Show Tree"}
+          </button>
+        </div>
       </div>
       
-      <div className="space-y-4">
+      {showTree && (
+        <div className="space-y-4">
         {sourceNodes.map((node) => (
           <div key={node.id} className="space-y-2">
             <div 
@@ -134,7 +148,8 @@ export function CategoryHierarchy({ nodes, selectedId, onSelect }: CategoryHiera
             )}
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

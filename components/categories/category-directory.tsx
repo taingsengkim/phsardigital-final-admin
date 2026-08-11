@@ -1,7 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { PencilIcon, Trash2Icon } from "lucide-react"
+import { PencilIcon, Trash2Icon, PlusIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 export interface CategoryDirectoryItem {
@@ -17,14 +17,26 @@ interface CategoryDirectoryProps {
   categories: CategoryDirectoryItem[]
   selectedId?: string
   onSelect?: (id: string) => void
+  onEdit?: (id: string) => void
+  onDelete?: (id: string) => void
+  onStartCreate?: () => void
   isLoading?: boolean
 }
 
-export function CategoryDirectory({ categories, selectedId, onSelect, isLoading }: CategoryDirectoryProps) {
+export function CategoryDirectory({ categories, selectedId, onSelect, onEdit, onDelete, onStartCreate, isLoading }: CategoryDirectoryProps) {
   return (
     <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-      <div className="p-6 border-b border-gray-50">
+      <div className="p-6 border-b border-gray-50 flex items-center justify-between">
         <h4 className="font-bold text-gray-900">Category Directory</h4>
+        {onStartCreate && (
+          <button
+            type="button"
+            onClick={onStartCreate}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#6338f6] hover:bg-[#532edb] text-white text-xs font-bold transition-all shadow-sm"
+          >
+            <PlusIcon size={14} /> Add Category
+          </button>
+        )}
       </div>
       
       <div className="overflow-x-auto">
@@ -49,7 +61,7 @@ export function CategoryDirectory({ categories, selectedId, onSelect, isLoading 
               categories.map((cat) => (
               <tr
                 key={cat.id}
-                className={`transition-colors ${selectedId === cat.id ? "bg-[#f8f7ff]" : "hover:bg-gray-50"}`}
+                className={`transition-colors cursor-pointer ${selectedId === cat.id ? "bg-[#f8f7ff]" : "hover:bg-gray-50"}`}
                 onClick={() => onSelect?.(cat.id)}
               >
                 <td className="p-6">
@@ -71,10 +83,26 @@ export function CategoryDirectory({ categories, selectedId, onSelect, isLoading 
                 </td>
                 <td className="p-6">
                   <div className="flex items-center justify-center gap-2">
-                    <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" type="button">
+                    <button 
+                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit?.(cat.id);
+                      }}
+                    >
                       <PencilIcon size={16} />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors" type="button">
+                    <button 
+                      className="p-2 rounded-lg hover:bg-red-50 text-red-400 transition-colors" 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Are you sure you want to delete "${cat.name}"? This action cannot be undone.`)) {
+                          onDelete?.(cat.id);
+                        }
+                      }}
+                    >
                       <Trash2Icon size={16} />
                     </button>
                   </div>

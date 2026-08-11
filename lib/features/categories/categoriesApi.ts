@@ -5,6 +5,7 @@ export type CategoryStatus = "active" | "inactive" | string
 export interface CategoryRecord {
   id: string
   name: string
+  slug: string
   description: string
   status: CategoryStatus
   listingsCount: number
@@ -18,12 +19,15 @@ export interface CategoryRecord {
 export interface CreateCategoryInput {
   name: string
   slug: string
+  iconFileId?: string
   description?: string
-  level: number
+  level?: number
+  sortOrder?: number
   isActive: boolean
+  parentUuid?: string
 }
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API ?? "").replace(/\/$/, "")
+const apiBaseUrl = (process.env.NEXT_PUBLIC_API ?? "/api").replace(/\/$/, "")
 
 function toText(value: unknown, fallback = "") {
   if (typeof value === "string") {
@@ -67,6 +71,7 @@ function toStatus(value: unknown): CategoryStatus {
 
 function getCategoryId(value: Record<string, unknown>, index: number) {
   return (
+    toText(value.uuid) ||
     toText(value.id) ||
     toText(value._id) ||
     toText(value.slug) ||
@@ -110,6 +115,7 @@ function normalizeCategory(value: unknown, index = 0): CategoryRecord {
   return {
     id: getCategoryId(record, index),
     name: toText(record.name, "Untitled category"),
+    slug: toText(record.slug) || "",
     description:
       toText(record.description) || toText(record.details) || "No description provided.",
     status: toStatus(record.status ?? record.state ?? record.isActive),
@@ -129,6 +135,7 @@ function normalizeCategoryList(response: unknown): CategoryRecord[] {
 
   const record = (response ?? {}) as Record<string, unknown>
   const list =
+    (Array.isArray(record.content) && record.content) ||
     (Array.isArray(record.data) && record.data) ||
     (Array.isArray(record.categories) && record.categories) ||
     (Array.isArray(record.items) && record.items) ||
@@ -175,7 +182,39 @@ export const categoriesApi = createApi({
       },
       invalidatesTags: [{ type: "Categories", id: "LIST" }],
     }),
+    updateCategory: builder.mutation<CategoryRecord, { id: string; data: Partial<CreateCategoryInput> }>({
+      query: ({ id, data }) => ({
+        url: `/categories/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      transformResponse: (response: unknown) => {
+        const normalized = normalizeCategoryList(response)
+        return normalized[0] ?? normalizeCategory(response)
+      },
+      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+    }),
+    deleteCategory: builder.mutation<{ success: boolean; id: string }, string>({
+      query: (id) => ({
+        url: `/categories/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+    }),
+    uploadCategoryIcon: builder.mutation<{ objectName?: string; uri?: string; id?: string; uuid?: string }, FormData>({
+      query: (formData) => ({
+        url: "/files/upload",
+        method: "POST",
+        body: formData,
+      }),
+    }),
   }),
 })
 
-export const { useGetCategoriesQuery, useCreateCategoryMutation } = categoriesApi
+export const { 
+  useGetCategoriesQuery, 
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  useUploadCategoryIconMutation,
+} = categoriesApi

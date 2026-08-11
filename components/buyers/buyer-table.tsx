@@ -50,7 +50,7 @@ export function BuyerTable({ buyers, isLoading }: BuyerTableProps) {
                 <td className="p-6">
                   <div className="flex items-center gap-3">
                     <Avatar className="size-10">
-                      <AvatarImage src={buyer.avatar} />
+                      <AvatarImage src={buyer.avatar ?? undefined} />
                       <AvatarFallback>{buyer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>

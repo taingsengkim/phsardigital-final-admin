@@ -108,7 +108,7 @@ const SelectContent = ({ children, onSelect, className }: SelectContentProps) =>
 const SelectItem = ({ value, children, onSelect, className }: SelectItemProps) => {
   return (
     <div
-      onClick={() => onSelect(value)}
+      onClick={() => onSelect?.(value)}
       className={cn(
         "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-gray-100 hover:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className

@@ -1,15 +1,37 @@
 "use client"
 
-import { ClipboardListIcon, BanIcon, UserXIcon, FlagIcon, KeyboardIcon } from "lucide-react"
+import { useState } from "react"
+import { ClipboardListIcon, BanIcon, UserXIcon, FlagIcon, KeyboardIcon, CheckCircle2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import type { ListingRecord } from "@/lib/features/marketplace/marketplaceApi"
+import { type ListingRecord, useUpdateListingMutation } from "@/lib/features/marketplace/marketplaceApi"
 
 interface ListingAuditSidebarProps {
   listing: ListingRecord | null
 }
 
 export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
+  const [internalNotes, setInternalNotes] = useState("")
+  const [updateListing, { isLoading }] = useUpdateListingMutation()
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!listing) return
+    
+    try {
+      await updateListing({
+        id: listing.id,
+        data: {
+          status,
+          description: internalNotes ? `Moderation Note: ${internalNotes}\n\n${listing.description}` : undefined,
+        },
+      }).unwrap()
+      setInternalNotes("")
+    } catch (error) {
+      console.error("Failed to update listing status", error)
+      alert("Failed to update listing status. Please try again.")
+    }
+  }
+
   return (
     <div className="w-100 flex flex-col gap-6 sticky top-8">
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
@@ -58,27 +80,53 @@ export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
           <div className="space-y-2">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Notes (Internal)</p>
             <Textarea 
+              value={internalNotes}
+              onChange={(e) => setInternalNotes(e.target.value)}
               placeholder="Explain rejection reason or leave internal notes..." 
               className="bg-gray-50 border-none rounded-2xl min-h-25 text-xs font-medium placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#6338f6]"
             />
-            <p className="text-right text-[10px] text-gray-400 font-medium">0 / 250 CHARACTERS</p>
+            <p className="text-right text-[10px] text-gray-400 font-medium">{internalNotes.length} / 250 CHARACTERS</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-             <Button className="bg-[#e11d48] hover:bg-[#be123c] text-white rounded-xl h-11 font-bold flex items-center gap-2">
-                <BanIcon size={16} />
-                Ban Product
+          <div className="flex flex-col gap-3">
+             <Button 
+               disabled={!listing || isLoading}
+               onClick={() => handleUpdateStatus("ACTIVE")}
+               className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl h-11 font-bold flex items-center gap-2"
+             >
+                <CheckCircle2Icon size={16} />
+                Approve Product
              </Button>
-             <Button variant="outline" className="border-rose-200 text-[#e11d48] hover:bg-rose-50 rounded-xl h-11 font-bold flex items-center gap-2">
-                <UserXIcon size={16} />
-                Ban Seller
-             </Button>
+
+            <div className="grid grid-cols-2 gap-3">
+               <Button 
+                 disabled={!listing || isLoading}
+                 onClick={() => handleUpdateStatus("ARCHIVED")}
+                 className="bg-[#e11d48] hover:bg-[#be123c] text-white rounded-xl h-11 font-bold flex items-center gap-2"
+               >
+                  <BanIcon size={16} />
+                  Ban Product
+               </Button>
+               <Button 
+                 disabled={!listing || isLoading}
+                 variant="outline" 
+                 className="border-rose-200 text-[#e11d48] hover:bg-rose-50 rounded-xl h-11 font-bold flex items-center gap-2"
+               >
+                  <UserXIcon size={16} />
+                  Ban Seller
+               </Button>
+            </div>
+            
+            <Button 
+              disabled={!listing || isLoading}
+              onClick={() => handleUpdateStatus("DRAFT")}
+              variant="outline" 
+              className="w-full border-gray-100 text-gray-600 hover:bg-gray-50 rounded-xl h-11 font-bold flex items-center justify-center gap-2"
+            >
+               <FlagIcon size={16} />
+               Flag for Review
+            </Button>
           </div>
-          
-          <Button variant="outline" className="w-full border-gray-100 text-gray-600 hover:bg-gray-50 rounded-xl h-11 font-bold flex items-center justify-center gap-2">
-             <FlagIcon size={16} />
-             Flag for Review
-          </Button>
         </div>
       </div>
 

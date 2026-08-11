@@ -12,6 +12,7 @@ import { DashboardHeader } from "@/components/dashboard/header"
 import { CategoryHierarchy, type CategoryTreeNode } from "@/components/categories/category-tree"
 import { CategoryDirectory, type CategoryDirectoryItem } from "@/components/categories/category-directory"
 import { CategoryDetails } from "@/components/categories/category-details"
+import { AddCategoryModal } from "@/components/categories/add-category-modal"
 import { CategoryGrowthChart, CategoryListingsBar } from "@/components/categories/category-charts"
 import { 
   LayoutGridIcon, 
@@ -20,13 +21,17 @@ import {
   StarIcon, 
   SearchIcon,
   DownloadIcon,
-  TrendingUpIcon
+  TrendingUpIcon,
+  PlusIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import {
   type CategoryRecord,
   type CreateCategoryInput,
   useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
   useGetCategoriesQuery,
 } from "@/lib/features/categories/categoriesApi"
 
@@ -169,7 +174,12 @@ export default function CategoriesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>()
   const [searchTerm, setSearchTerm] = useState("")
   const [createError, setCreateError] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  
   const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
+  const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
+  const [deleteCategory] = useDeleteCategoryMutation()
 
   const flattenedCategories = useMemo(() => flattenCategories(categories), [categories])
   const filteredCategories = useMemo(
@@ -182,8 +192,7 @@ export default function CategoriesPage() {
 
   const activeSelectedCategoryId = selectedCategoryId ?? filteredCategories[0]?.id
 
-  const selectedCategory =
-    filteredCategories.find((category) => category.id === activeSelectedCategoryId) ??
+  const selectedCategory = filteredCategories.find((category) => category.id === activeSelectedCategoryId) ??
     filteredCategories[0] ??
     null
 
@@ -207,19 +216,50 @@ export default function CategoriesPage() {
     .sort((left, right) => right.listingsCount - left.listingsCount)
     .slice(0, 4)
 
+  const handleStartCreate = () => {
+    setIsEditing(false)
+    setIsModalOpen(true)
+  }
+
   const handleCreateCategory = async (payload: CreateCategoryInput) => {
     try {
       setCreateError(null)
-
       const created = await createCategory(payload).unwrap()
-
       setSelectedCategoryId(created.id)
       await refetch()
-
       return created
     } catch (error) {
       setCreateError(getErrorMessage(error))
       throw error
+    }
+  }
+
+  const handleUpdateCategory = async (id: string, payload: Partial<CreateCategoryInput>) => {
+    try {
+      setCreateError(null)
+      const updated = await updateCategory({ id, data: payload }).unwrap()
+      setIsEditing(false)
+      await refetch()
+      return updated
+    } catch (error) {
+      setCreateError(getErrorMessage(error))
+      throw error
+    }
+  }
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      setCreateError(null)
+      const categoryToDelete = flattenedCategories.find(c => c.id === id)
+      const slug = categoryToDelete?.slug || id
+      await deleteCategory(slug).unwrap()
+      if (selectedCategoryId === id) {
+        setSelectedCategoryId(undefined)
+        setIsEditing(false)
+      }
+      await refetch()
+    } catch (error) {
+      setCreateError(getErrorMessage(error))
     }
   }
 
@@ -231,21 +271,30 @@ export default function CategoriesPage() {
           title="Category Manager" 
           description="Organize and manage your product categories and subcategories."
         >
-          <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
-            <Input 
-              placeholder="Search categories..." 
-              className="pl-10 bg-white border-gray-100 rounded-xl h-11 w-72 shadow-sm"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
+              <Input 
+                placeholder="Search categories..." 
+                className="pl-10 bg-white border-gray-100 rounded-xl h-11 w-64 shadow-sm"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+              />
+            </div>
+            <Button
+              onClick={handleStartCreate}
+              className="bg-[#6338f6] hover:bg-[#532edb] text-white rounded-xl h-11 px-4 font-bold flex items-center gap-2 shadow-md shadow-purple-500/20"
+            >
+              <PlusIcon size={18} /> Add Category
+            </Button>
           </div>
         </DashboardHeader>
         
         <div className="p-8 space-y-8">
           {createError && (
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
-              {createError}
+            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800 flex justify-between items-center">
+              <span>{createError}</span>
+              <button className="text-amber-800 font-bold" onClick={() => setCreateError(null)}>×</button>
             </div>
           )}
 
@@ -278,7 +327,7 @@ export default function CategoriesPage() {
               iconBgColor="bg-white"
               iconColor="text-[#6338f6]"
             />
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
+            <div className="bg-[#ffffff] p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">POPULAR CATEGORY</p>
                 <h4 className="text-lg font-bold text-gray-900">{popularCategory?.name ?? "No data"}</h4>
@@ -299,12 +348,24 @@ export default function CategoriesPage() {
                 key={categories.length ? "category-tree-loaded" : "category-tree-empty"}
                 nodes={treeNodes}
                 selectedId={selectedCategory?.id}
-                onSelect={setSelectedCategoryId}
+                onSelect={(id) => {
+                  setSelectedCategoryId(id)
+                  setIsEditing(false)
+                }}
               />
               <CategoryDirectory
                 categories={directoryItems}
                 selectedId={selectedCategory?.id}
-                onSelect={setSelectedCategoryId}
+                onSelect={(id) => {
+                  setSelectedCategoryId(id)
+                  setIsEditing(false)
+                }}
+                onEdit={(id) => {
+                  setSelectedCategoryId(id)
+                  setIsEditing(true)
+                }}
+                onDelete={handleDeleteCategory}
+                onStartCreate={handleStartCreate}
                 isLoading={isLoading}
               />
             </div>
@@ -312,10 +373,15 @@ export default function CategoriesPage() {
             {/* Right Column - Details and Charts */}
             <div className="space-y-8">
               <CategoryDetails
-                key={selectedCategory?.id ?? "category-details-empty"}
+                key={`${selectedCategory?.id}-${isEditing ? 'edit' : 'view'}`}
                 category={selectedCategory}
-                isCreating={isCreating}
+                availableCategories={flattenedCategories}
+                isCreating={isCreating || isUpdating}
                 onCreate={handleCreateCategory}
+                isEditing={isEditing}
+                onUpdate={handleUpdateCategory}
+                onCancelEdit={() => setIsEditing(false)}
+                onStartCreate={handleStartCreate}
               />
               
               <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
@@ -346,6 +412,15 @@ export default function CategoriesPage() {
           </div>
         </div>
         
+        {/* Add Category Modal Popup */}
+        <AddCategoryModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          availableCategories={flattenedCategories}
+          isSubmitting={isCreating}
+          onSubmit={handleCreateCategory}
+        />
+
         {/* Floating Action Button for Export as shown in bottom right of image */}
         <button className="fixed bottom-8 right-8 size-14 bg-[#6338f6] text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-[#532edb] transition-all z-50">
           <DownloadIcon size={24} />
