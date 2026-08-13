@@ -9,6 +9,7 @@ export interface CategoryDirectoryItem {
   name: string
   icon: ReactNode
   iconBg: string
+  iconUrl?: string | null
   count: string
   status: string
 }
@@ -65,8 +66,13 @@ export function CategoryDirectory({ categories, selectedId, onSelect, onEdit, on
                 onClick={() => onSelect?.(cat.id)}
               >
                 <td className="p-6">
-                  <div className={`size-10 rounded-xl ${cat.iconBg} flex items-center justify-center`}>
-                    {cat.icon}
+                  <div className={`size-10 rounded-xl ${cat.iconBg} flex items-center justify-center overflow-hidden p-1 shadow-sm`}>
+                    {cat.iconUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={cat.iconUrl} alt={cat.name} className="size-full object-contain" />
+                    ) : (
+                      cat.icon
+                    )}
                   </div>
                 </td>
                 <td className="p-6">

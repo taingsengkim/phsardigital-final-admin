@@ -22,7 +22,17 @@ import {
   SearchIcon,
   DownloadIcon,
   TrendingUpIcon,
-  PlusIcon
+  PlusIcon,
+  SmartphoneIcon,
+  CarIcon,
+  HomeIcon,
+  ShirtIcon,
+  BookOpenIcon,
+  Gamepad2Icon,
+  SparklesIcon,
+  FolderIcon,
+  UtensilsIcon,
+  PackageIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -38,30 +48,65 @@ import {
 function getCategoryVisuals(name: string) {
   const normalized = name.toLowerCase()
 
-  if (normalized.includes("elect")) {
+  if (normalized.includes("elect") || normalized.includes("phone") || normalized.includes("tech") || normalized.includes("digital")) {
     return {
-      icon: <span className="size-4 text-purple-600">📱</span>,
-      iconBg: "bg-purple-50",
+      icon: <SmartphoneIcon className="size-5 text-[#6338f6]" />,
+      iconBg: "bg-purple-50 border border-purple-100",
     }
   }
 
-  if (normalized.includes("vehicle") || normalized.includes("auto") || normalized.includes("car")) {
+  if (normalized.includes("vehicle") || normalized.includes("auto") || normalized.includes("car") || normalized.includes("motor")) {
     return {
-      icon: <span className="size-4 text-blue-600">🚗</span>,
-      iconBg: "bg-blue-50",
+      icon: <CarIcon className="size-5 text-blue-600" />,
+      iconBg: "bg-blue-50 border border-blue-100",
     }
   }
 
-  if (normalized.includes("property") || normalized.includes("home") || normalized.includes("real")) {
+  if (normalized.includes("property") || normalized.includes("home") || normalized.includes("real") || normalized.includes("house")) {
     return {
-      icon: <span className="size-4 text-indigo-600">🏠</span>,
-      iconBg: "bg-indigo-50",
+      icon: <HomeIcon className="size-5 text-emerald-600" />,
+      iconBg: "bg-emerald-50 border border-emerald-100",
+    }
+  }
+
+  if (normalized.includes("fashion") || normalized.includes("cloth") || normalized.includes("wear") || normalized.includes("apparel")) {
+    return {
+      icon: <ShirtIcon className="size-5 text-pink-600" />,
+      iconBg: "bg-pink-50 border border-pink-100",
+    }
+  }
+
+  if (normalized.includes("book") || normalized.includes("read") || normalized.includes("study")) {
+    return {
+      icon: <BookOpenIcon className="size-5 text-amber-600" />,
+      iconBg: "bg-amber-50 border border-amber-100",
+    }
+  }
+
+  if (normalized.includes("game") || normalized.includes("toy") || normalized.includes("play")) {
+    return {
+      icon: <Gamepad2Icon className="size-5 text-indigo-600" />,
+      iconBg: "bg-indigo-50 border border-indigo-100",
+    }
+  }
+
+  if (normalized.includes("food") || normalized.includes("drink") || normalized.includes("eat")) {
+    return {
+      icon: <UtensilsIcon className="size-5 text-orange-600" />,
+      iconBg: "bg-orange-50 border border-orange-100",
+    }
+  }
+
+  if (normalized.includes("test") || normalized.includes("demo") || normalized.includes("sample")) {
+    return {
+      icon: <SparklesIcon className="size-5 text-violet-600" />,
+      iconBg: "bg-violet-50 border border-violet-100",
     }
   }
 
   return {
-    icon: <span className="size-4 text-slate-600">•</span>,
-    iconBg: "bg-slate-50",
+    icon: <FolderIcon className="size-5 text-[#6338f6]" />,
+    iconBg: "bg-purple-50/80 border border-purple-100",
   }
 }
 
@@ -176,6 +221,7 @@ export default function CategoriesPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [categoryToEdit, setCategoryToEdit] = useState<CategoryRecord | null>(null)
   
   const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
   const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
@@ -204,6 +250,7 @@ export default function CategoriesPage() {
         id: category.id,
         name: category.name,
         ...getCategoryVisuals(category.name),
+        iconUrl: category.iconUrl,
         count: formatListingsCount(category.listingsCount),
         status: category.status,
       })),
@@ -217,7 +264,12 @@ export default function CategoriesPage() {
     .slice(0, 4)
 
   const handleStartCreate = () => {
-    setIsEditing(false)
+    setCategoryToEdit(null)
+    setIsModalOpen(true)
+  }
+
+  const handleStartEdit = (category: CategoryRecord) => {
+    setCategoryToEdit(category)
     setIsModalOpen(true)
   }
 
@@ -245,6 +297,13 @@ export default function CategoriesPage() {
       setCreateError(getErrorMessage(error))
       throw error
     }
+  }
+
+  const handleSaveModalCategory = async (payload: CreateCategoryInput, editId?: string) => {
+    if (editId) {
+      return handleUpdateCategory(editId, payload)
+    }
+    return handleCreateCategory(payload)
   }
 
   const handleDeleteCategory = async (id: string) => {
@@ -361,8 +420,10 @@ export default function CategoriesPage() {
                   setIsEditing(false)
                 }}
                 onEdit={(id) => {
-                  setSelectedCategoryId(id)
-                  setIsEditing(true)
+                  const targetCat = flattenedCategories.find(c => c.id === id)
+                  if (targetCat) {
+                    handleStartEdit(targetCat)
+                  }
                 }}
                 onDelete={handleDeleteCategory}
                 onStartCreate={handleStartCreate}
@@ -382,6 +443,7 @@ export default function CategoriesPage() {
                 onUpdate={handleUpdateCategory}
                 onCancelEdit={() => setIsEditing(false)}
                 onStartCreate={handleStartCreate}
+                onStartEdit={(cat) => handleStartEdit(cat)}
               />
               
               <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
@@ -412,13 +474,17 @@ export default function CategoriesPage() {
           </div>
         </div>
         
-        {/* Add Category Modal Popup */}
+        {/* Category Modal Popup (Handles Create & Edit with Icon Photo Upload) */}
         <AddCategoryModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false)
+            setCategoryToEdit(null)
+          }}
+          categoryToEdit={categoryToEdit}
           availableCategories={flattenedCategories}
-          isSubmitting={isCreating}
-          onSubmit={handleCreateCategory}
+          isSubmitting={isCreating || isUpdating}
+          onSubmit={handleSaveModalCategory}
         />
 
         {/* Floating Action Button for Export as shown in bottom right of image */}

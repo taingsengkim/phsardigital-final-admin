@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { SmartphoneIcon, PlusIcon, UploadIcon } from "lucide-react"
+import { SmartphoneIcon, PlusIcon, UploadIcon, PencilIcon } from "lucide-react"
 
 import type { CategoryRecord, CreateCategoryInput } from "@/lib/features/categories/categoriesApi"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ interface CategoryDetailsProps {
   onUpdate?: (id: string, payload: Partial<CreateCategoryInput>) => Promise<unknown>
   onCancelEdit?: () => void
   onStartCreate?: () => void
+  onStartEdit?: (category: CategoryRecord) => void
 }
 
 const initialFormState: CreateCategoryInput = {
@@ -38,6 +39,7 @@ export function CategoryDetails({
   onUpdate,
   onCancelEdit,
   onStartCreate,
+  onStartEdit,
 }: CategoryDetailsProps) {
   const [formState, setFormState] = useState<CreateCategoryInput>(initialFormState)
   const [isAddingNew, setIsAddingNew] = useState(!category || !isEditing)
@@ -110,16 +112,28 @@ export function CategoryDetails({
           <span className="text-[10px] font-bold text-[#6338f6] uppercase tracking-widest bg-purple-50 px-3 py-1.5 rounded-full">
             {isEditing ? "Editing Category" : isAddingNew ? "New Category Form" : "Category Details"}
           </span>
-          {!isAddingNew && !isEditing && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleStartAddCategory}
-              className="text-xs font-bold rounded-xl border-purple-200 text-[#6338f6] hover:bg-purple-50 h-8 px-3 flex items-center gap-1"
-            >
-              <PlusIcon size={14} /> Add Category
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {category && onStartEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onStartEdit(category)}
+                className="text-xs font-bold rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 h-8 px-2.5 flex items-center gap-1"
+              >
+                <PencilIcon size={13} /> Edit
+              </Button>
+            )}
+            {!isAddingNew && !isEditing && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleStartAddCategory}
+                className="text-xs font-bold rounded-xl border-purple-200 text-[#6338f6] hover:bg-purple-50 h-8 px-2.5 flex items-center gap-1"
+              >
+                <PlusIcon size={13} /> Add
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="size-20 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4">

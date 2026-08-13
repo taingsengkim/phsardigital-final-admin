@@ -13,6 +13,8 @@ export interface CategoryRecord {
   createdAt: string | null
   updatedAt: string | null
   iconName: string | null
+  iconUrl?: string | null
+  iconFileId?: string | null
   children?: CategoryRecord[]
 }
 
@@ -124,6 +126,8 @@ function normalizeCategory(value: unknown, index = 0): CategoryRecord {
     createdAt: toText(record.createdAt) || toText(record.created_at) || null,
     updatedAt: toText(record.updatedAt) || toText(record.updated_at) || null,
     iconName: getIconName(record),
+    iconUrl: toText(record.iconUrl) || toText(record.icon_url) || toText(record.icon) || null,
+    iconFileId: toText(record.iconFileId) || toText(record.icon_file_id) || null,
     children: nestedChildren,
   }
 }

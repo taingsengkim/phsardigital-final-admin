@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { XIcon, PlusIcon, FolderPlusIcon, UploadIcon, ImageIcon, Loader2Icon } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { XIcon, PlusIcon, FolderPlusIcon, UploadIcon, Loader2Icon, PencilIcon, SaveIcon } from "lucide-react"
 
 import { 
   type CategoryRecord, 
@@ -15,9 +15,10 @@ import { Textarea } from "@/components/ui/textarea"
 interface AddCategoryModalProps {
   isOpen: boolean
   onClose: () => void
+  categoryToEdit?: CategoryRecord | null
   availableCategories?: CategoryRecord[]
   isSubmitting?: boolean
-  onSubmit: (payload: CreateCategoryInput) => Promise<unknown>
+  onSubmit: (payload: CreateCategoryInput, editId?: string) => Promise<unknown>
 }
 
 const initialFormState: CreateCategoryInput = {
@@ -34,6 +35,7 @@ const initialFormState: CreateCategoryInput = {
 export function AddCategoryModal({
   isOpen,
   onClose,
+  categoryToEdit,
   availableCategories = [],
   isSubmitting = false,
   onSubmit,
@@ -44,6 +46,28 @@ export function AddCategoryModal({
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadIcon, { isLoading: isUploading }] = useUploadCategoryIconMutation()
+
+  const isEditing = Boolean(categoryToEdit)
+
+  useEffect(() => {
+    if (isOpen && categoryToEdit) {
+      setFormState({
+        name: categoryToEdit.name,
+        slug: categoryToEdit.slug,
+        description: categoryToEdit.description || "",
+        level: categoryToEdit.parentId ? 2 : 1,
+        sortOrder: 0,
+        isActive: categoryToEdit.status?.toLowerCase() === "active",
+        parentUuid: categoryToEdit.parentId || undefined,
+        iconFileId: undefined,
+      })
+      setIconPreview(categoryToEdit.iconUrl || null)
+    } else if (isOpen) {
+      setFormState(initialFormState)
+      setIconPreview(null)
+    }
+    setUploadError(null)
+  }, [isOpen, categoryToEdit])
 
   if (!isOpen) return null
 
@@ -108,7 +132,7 @@ export function AddCategoryModal({
     }
 
     try {
-      await onSubmit(payload)
+      await onSubmit(payload, categoryToEdit?.id)
       setFormState(initialFormState)
       setIconPreview(null)
       onClose()
@@ -127,11 +151,15 @@ export function AddCategoryModal({
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-[#f8f7ff] shrink-0">
           <div className="flex items-center gap-3">
             <div className="size-10 bg-purple-100 text-[#6338f6] rounded-2xl flex items-center justify-center shadow-sm">
-              <FolderPlusIcon size={20} />
+              {isEditing ? <PencilIcon size={20} /> : <FolderPlusIcon size={20} />}
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 leading-snug">Add New Category</h3>
-              <p className="text-xs text-gray-500 font-medium">Create a new category or subcategory for your directory</p>
+              <h3 className="text-lg font-bold text-gray-900 leading-snug">
+                {isEditing ? `Edit Category: ${categoryToEdit?.name}` : "Add New Category"}
+              </h3>
+              <p className="text-xs text-gray-500 font-medium">
+                {isEditing ? "Modify category details and update icon" : "Create a new category or subcategory for your directory"}
+              </p>
             </div>
           </div>
           <button
@@ -178,17 +206,26 @@ export function AddCategoryModal({
                   <div>
                     <p className="text-xs font-bold text-gray-900">Icon Selected</p>
                     <p className="text-[10px] text-emerald-600 font-bold">
-                      {isUploading ? "Uploading..." : formState.iconFileId ? "Uploaded successfully" : "Ready to upload"}
+                      {isUploading ? "Uploading..." : formState.iconFileId ? "Uploaded new icon" : "Current icon"}
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveIcon}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                >
-                  <XIcon size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-[#6338f6] hover:bg-purple-100 transition-colors text-xs font-bold flex items-center gap-1"
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveIcon}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <XIcon size={16} />
+                  </button>
+                </div>
               </div>
             ) : (
               <div
@@ -200,7 +237,7 @@ export function AddCategoryModal({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-700 group-hover:text-[#6338f6] transition-colors">
-                    Click to upload category icon
+                    Click to upload category icon photo
                   </p>
                   <p className="text-[10px] text-gray-400">PNG, JPG, SVG or WEBP (max 5MB)</p>
                 </div>
@@ -230,11 +267,13 @@ export function AddCategoryModal({
                 className="w-full h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6338f6] font-medium"
               >
                 <option value="">None (Top-Level)</option>
-                {availableCategories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
+                {availableCategories
+                  .filter((cat) => !categoryToEdit || cat.id !== categoryToEdit.id)
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
@@ -279,10 +318,12 @@ export function AddCategoryModal({
             >
               {isUploading || isSubmitting ? (
                 <Loader2Icon size={16} className="animate-spin" />
+              ) : isEditing ? (
+                <SaveIcon size={16} />
               ) : (
                 <PlusIcon size={16} />
               )}
-              {isSubmitting ? "Creating..." : "Create Category"}
+              {isSubmitting ? "Saving..." : isEditing ? "Save Changes" : "Create Category"}
             </Button>
           </div>
         </form>
