@@ -10,13 +10,39 @@ import {
   FileTextIcon,
   ExternalLinkIcon
 } from "lucide-react"
+import type { SellerApplication } from "@/lib/types/seller-application"
+import {
+  useApproveSellerApplicationMutation,
+  useGetSellerApplicationQuery,
+  useRejectSellerApplicationMutation,
+} from "@/lib/redux/service/sellerApplicationApi"
 
-export function ApplicationDetails() {
+interface ApplicationDetailsProps {
+  application: SellerApplication
+  onClose: () => void
+}
+
+export function ApplicationDetails({ application, onClose }: ApplicationDetailsProps) {
+  const { data: applicationDetails, isFetching } = useGetSellerApplicationQuery(application.id)
+  const [approveApplication, { isLoading: isApproving }] = useApproveSellerApplicationMutation()
+  const [rejectApplication, { isLoading: isRejecting }] = useRejectSellerApplicationMutation()
+  const details = applicationDetails ?? application
+
+  const handleApprove = async () => {
+    await approveApplication(application.id).unwrap()
+    onClose()
+  }
+
+  const handleReject = async () => {
+    await rejectApplication(application.id).unwrap()
+    onClose()
+  }
+
   return (
     <div className="w-[400px] bg-white border-l border-gray-100 flex flex-col h-full overflow-hidden">
       <div className="p-6 border-b border-gray-50 flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-900">Application Details</h3>
-        <button className="text-gray-400 hover:text-gray-600">
+        <button onClick={onClose} type="button" className="text-gray-400 hover:text-gray-600">
           <XIcon size={20} />
         </button>
       </div>
@@ -25,15 +51,19 @@ export function ApplicationDetails() {
         {/* Applicant Header */}
         <div className="flex flex-col items-center text-center">
           <Avatar className="size-24 mb-4">
-            <AvatarImage src="/avatars/dara.jpg" />
-            <AvatarFallback className="bg-purple-100 text-purple-700 text-2xl font-bold">DK</AvatarFallback>
+            <AvatarImage src={details.avatar ?? undefined} />
+            <AvatarFallback className="bg-purple-100 text-purple-700 text-2xl font-bold">
+              {details.name.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
-          <h4 className="text-xl font-bold text-gray-900">Dara Kim</h4>
-          <p className="text-sm text-gray-500 mb-3">dara.kim@gmail.com</p>
+          <h4 className="text-xl font-bold text-gray-900">{details.name}</h4>
+          <p className="text-sm text-gray-500 mb-3">{details.email}</p>
           <Badge variant="warning" className="font-bold py-1 px-3">
-            • Pending Review
+            • {details.status}
           </Badge>
-          <p className="text-[10px] text-gray-400 mt-3">Applied on May 18, 2025 at 10:30 AM</p>
+          <p className="text-[10px] text-gray-400 mt-3">
+            {isFetching ? "Loading details..." : `Applied on ${details.appliedOn} at ${details.appliedAt}`}
+          </p>
         </div>
         
         {/* Business Information */}
@@ -42,28 +72,28 @@ export function ApplicationDetails() {
           <div className="grid grid-cols-2 gap-y-4">
             <div>
               <p className="text-[10px] text-gray-400 mb-1">Business Name</p>
-              <p className="text-sm font-semibold text-gray-900">Tech Store Cambodia</p>
+              <p className="text-sm font-semibold text-gray-900">{details.businessName}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 mb-1">Business Type</p>
-              <p className="text-sm font-semibold text-gray-900">Electronics Retailer</p>
+              <p className="text-sm font-semibold text-gray-900">{details.businessType}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 mb-1">Phone Number</p>
-              <p className="text-sm font-semibold text-gray-900">+855 12 345 678</p>
+              <p className="text-sm font-semibold text-gray-900">{details.phone}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 mb-1">Business Email</p>
-              <p className="text-sm font-semibold text-gray-900">info@techstore.com</p>
+              <p className="text-sm font-semibold text-gray-900">{details.businessEmail}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 mb-1">Location</p>
-              <p className="text-sm font-semibold text-gray-900">Phnom Penh, Cambodia</p>
+              <p className="text-sm font-semibold text-gray-900">{details.location}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 mb-1">Website / Social</p>
-              <a href="#" className="text-sm font-semibold text-blue-600 hover:underline flex items-center gap-1">
-                facebook.com/techstore
+              <a href={details.website || "#"} className="text-sm font-semibold text-blue-600 hover:underline flex items-center gap-1">
+                {details.website || "Not provided"}
                 <ExternalLinkIcon size={12} />
               </a>
             </div>
@@ -74,7 +104,9 @@ export function ApplicationDetails() {
         <div className="space-y-4">
           <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Plan Requested</h5>
           <div className="bg-gray-50 p-4 rounded-2xl flex items-center justify-between">
-            <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-bold">Pro Plan</span>
+            <span className={`px-2 py-1 rounded text-[10px] font-bold ${details.planColor}`}>
+              {details.plan}
+            </span>
             <p className="text-sm font-bold text-gray-900">$9.99 <span className="text-[10px] text-gray-400 font-normal">/ month</span></p>
           </div>
         </div>
@@ -83,7 +115,7 @@ export function ApplicationDetails() {
         <div className="space-y-4">
           <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">About Business</h5>
           <p className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-            We are an electronics store offering smartphones, laptops, accessories and smart gadgets. Our mission is to provide quality products with trusted service.
+            {details.description}
           </p>
         </div>
         
@@ -98,13 +130,13 @@ export function ApplicationDetails() {
       </div>
       
       <div className="p-6 border-t border-gray-50 space-y-3">
-        <Button className="w-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-none rounded-xl h-11 font-bold flex items-center gap-2 shadow-none">
+        <Button disabled={isApproving || isRejecting} onClick={handleApprove} className="w-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-none rounded-xl h-11 font-bold flex items-center gap-2 shadow-none">
           <CheckCircle2Icon size={18} />
-          Approve Application
+          {isApproving ? "Approving..." : "Approve Application"}
         </Button>
-        <Button className="w-full bg-rose-50 text-rose-600 hover:bg-rose-100 border-none rounded-xl h-11 font-bold flex items-center gap-2 shadow-none">
+        <Button disabled={isApproving || isRejecting} onClick={handleReject} className="w-full bg-rose-50 text-rose-600 hover:bg-rose-100 border-none rounded-xl h-11 font-bold flex items-center gap-2 shadow-none">
           <XCircleIcon size={18} />
-          Reject Application
+          {isRejecting ? "Rejecting..." : "Reject Application"}
         </Button>
         <Button variant="outline" className="w-full border-gray-200 text-gray-600 rounded-xl h-11 font-bold flex items-center gap-2">
           <RotateCcwIcon size={18} />

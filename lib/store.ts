@@ -1,16 +1,28 @@
 import { configureStore } from '@reduxjs/toolkit'
 
-import { categoriesApi } from "@/lib/features/categories/categoriesApi"
+import { categoryApi } from "@/lib/redux/service/categoryApi"
 import { marketplaceApi } from "@/lib/features/marketplace/marketplaceApi"
+import { buyerApi } from "@/lib/redux/service/buyerApi"
+import { sellerApi } from "@/lib/redux/service/sellerApi"
+import { sellerApplicationApi } from "@/lib/redux/service/sellerApplicationApi"
 
 export const makeStore = () => {
     return configureStore({
         reducer: {
-            [categoriesApi.reducerPath]: categoriesApi.reducer,
+            [categoryApi.reducerPath]: categoryApi.reducer,
             [marketplaceApi.reducerPath]: marketplaceApi.reducer,
+            [buyerApi.reducerPath]: buyerApi.reducer,
+            [sellerApi.reducerPath]: sellerApi.reducer,
+            [sellerApplicationApi.reducerPath]: sellerApplicationApi.reducer,
         },
         middleware: (getDefaultMiddleware) =>
-            getDefaultMiddleware().concat(categoriesApi.middleware, marketplaceApi.middleware),
+            getDefaultMiddleware().concat(
+                categoryApi.middleware,
+                marketplaceApi.middleware,
+                buyerApi.middleware,
+                sellerApi.middleware,
+                sellerApplicationApi.middleware,
+            ),
     })
 }
 

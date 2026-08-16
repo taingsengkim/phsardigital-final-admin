@@ -22,7 +22,8 @@ import {
   StoreIcon,
 } from "lucide-react"
 
-import { useGetSellersQuery, type SellerRecord } from "@/lib/features/marketplace/marketplaceApi"
+import { useGetSellersQuery } from "@/lib/redux/service/sellerApi"
+import type { Seller } from "@/lib/types/seller"
 
 function SellerFilters() {
   return (
@@ -57,7 +58,7 @@ function SellerFilters() {
   )
 }
 
-function SellerTable({ sellers, isLoading }: { sellers: SellerRecord[]; isLoading?: boolean }) {
+function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoading?: boolean }) {
   const getVerificationBadge = (verification: string) => {
     if (verification.toLowerCase().includes("verified")) {
       return (

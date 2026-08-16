@@ -18,6 +18,7 @@ export const auth = betterAuth({
           clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "",
           discoveryUrl: `${process.env.KEYCLOAK_ISSUER}/.well-known/openid-configuration`,
           scopes: ["openid", "profile", "email"],
+          prompt: "login",
           pkce: true,
         },
       ],
@@ -32,18 +33,16 @@ export async function getAuthHeader(request: Request): Promise<Record<string, st
   }
 
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (session?.user?.id) {
-      const row = db
-        .prepare("SELECT accessToken FROM account WHERE userId = ? ORDER BY createdAt DESC LIMIT 1")
-        .get(session.user.id) as { accessToken?: string } | undefined;
+    const token = await auth.api.getAccessToken({
+      headers: request.headers,
+      body: { providerId: "keycloak" },
+    });
 
-      if (row?.accessToken) {
-        return { Authorization: `Bearer ${row.accessToken}` };
-      }
+    if (token.accessToken) {
+      return { Authorization: `Bearer ${token.accessToken}` };
     }
   } catch (err) {
-    console.error("Error retrieving user accessToken:", err);
+    console.error("Error retrieving or refreshing the Keycloak access token:", err);
   }
 
   return {};

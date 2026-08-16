@@ -3,10 +3,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { MoreHorizontalIcon } from "lucide-react"
-import type { BuyerRecord } from "@/lib/features/marketplace/marketplaceApi"
+import type { Buyer } from "@/lib/types/buyer"
 
 interface BuyerTableProps {
-  buyers: BuyerRecord[]
+  buyers: Buyer[]
   isLoading?: boolean
 }
 

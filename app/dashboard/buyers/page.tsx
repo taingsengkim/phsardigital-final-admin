@@ -17,7 +17,7 @@ import {
   DownloadIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useGetBuyersQuery } from "@/lib/features/marketplace/marketplaceApi"
+import { useGetBuyersQuery } from "@/lib/redux/service/buyerApi"
 
 export default function BuyersPage() {
   const { data: buyers = [], isLoading, isError, refetch } = useGetBuyersQuery()

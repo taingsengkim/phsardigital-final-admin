@@ -1,3 +1,6 @@
+"use client"
+
+import { useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -16,8 +19,16 @@ import {
   SettingsIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { SellerApplication } from "@/lib/types/seller-application"
+import { useGetSellerApplicationsQuery } from "@/lib/redux/service/sellerApplicationApi"
 
 export default function SellerApplicationsPage() {
+  const [selectedApplication, setSelectedApplication] = useState<SellerApplication | null>(null)
+  const { data: applications = [], isLoading, isError, refetch } = useGetSellerApplicationsQuery()
+  const pendingApplications = applications.filter((application) => application.status.toUpperCase().includes("PENDING"))
+  const approvedApplications = applications.filter((application) => application.status.toUpperCase().includes("APPROVED"))
+  const rejectedApplications = applications.filter((application) => application.status.toUpperCase().includes("REJECTED"))
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -44,8 +55,8 @@ export default function SellerApplicationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatsCard 
                 title="Total Applications" 
-                value="245" 
-                trend="18.6% vs last week" 
+                value={isLoading ? "..." : applications.length.toLocaleString()}
+                trend="Live from API"
                 trendType="up"
                 icon={ClipboardListIcon}
                 iconBgColor="bg-blue-50"
@@ -53,7 +64,7 @@ export default function SellerApplicationsPage() {
               />
               <StatsCard 
                 title="Pending Review" 
-                value="78" 
+                value={isLoading ? "..." : pendingApplications.length.toLocaleString()}
                 subtext="Require your action"
                 trendType="neutral"
                 icon={ClockIcon}
@@ -62,8 +73,8 @@ export default function SellerApplicationsPage() {
               />
               <StatsCard 
                 title="Approved" 
-                value="142" 
-                trend="22.4% vs last week" 
+                value={isLoading ? "..." : approvedApplications.length.toLocaleString()}
+                trend="Live from API"
                 trendType="up"
                 icon={CheckCircle2Icon}
                 iconBgColor="bg-emerald-50"
@@ -71,8 +82,8 @@ export default function SellerApplicationsPage() {
               />
               <StatsCard 
                 title="Rejected" 
-                value="25" 
-                trend="8.1% vs last week" 
+                value={isLoading ? "..." : rejectedApplications.length.toLocaleString()}
+                trend="Live from API"
                 trendType="down"
                 icon={XCircleIcon}
                 iconBgColor="bg-rose-50"
@@ -81,11 +92,26 @@ export default function SellerApplicationsPage() {
             </div>
 
             {/* Table Section */}
-            <ApplicationTable />
+            {isError && (
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+                Failed to load seller applications. <button type="button" onClick={() => refetch()} className="font-semibold underline">Retry</button>
+              </div>
+            )}
+            <ApplicationTable
+              applications={applications}
+              isLoading={isLoading}
+              selectedApplicationId={selectedApplication?.id ?? null}
+              onSelectApplication={setSelectedApplication}
+            />
           </div>
 
           {/* Details Sidebar */}
-          <ApplicationDetails />
+          {selectedApplication && (
+            <ApplicationDetails
+              application={selectedApplication}
+              onClose={() => setSelectedApplication(null)}
+            />
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

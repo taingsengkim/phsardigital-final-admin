@@ -3,11 +3,8 @@
 import { useState, useRef, useEffect } from "react"
 import { XIcon, PlusIcon, FolderPlusIcon, UploadIcon, Loader2Icon, PencilIcon, SaveIcon } from "lucide-react"
 
-import { 
-  type CategoryRecord, 
-  type CreateCategoryInput,
-  useUploadCategoryIconMutation 
-} from "@/lib/features/categories/categoriesApi"
+import type { CategoryRecord, CreateCategoryInput } from "@/lib/types/category"
+import { useUploadCategoryIconMutation } from "@/lib/redux/service/categoryApi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"

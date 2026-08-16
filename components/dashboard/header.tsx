@@ -17,6 +17,11 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const { data: session } = useSession()
 
+  const handleSignOut = async () => {
+    await signOut()
+    window.location.assign("/login")
+  }
+
   return (
     <header className="flex h-20 shrink-0 items-center justify-between px-8 border-b border-gray-100 bg-white">
       <div className="flex-1">
@@ -49,7 +54,7 @@ export function DashboardHeader({
               </AvatarFallback>
             </Avatar>
             <button 
-              onClick={async () => await signOut()}
+              onClick={handleSignOut}
               title="Sign Out"
               className="ml-2 p-2 rounded-full text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
             >

@@ -13,7 +13,6 @@ import { CategoryHierarchy, type CategoryTreeNode } from "@/components/categorie
 import { CategoryDirectory, type CategoryDirectoryItem } from "@/components/categories/category-directory"
 import { CategoryDetails } from "@/components/categories/category-details"
 import { AddCategoryModal } from "@/components/categories/add-category-modal"
-import { CategoryGrowthChart, CategoryListingsBar } from "@/components/categories/category-charts"
 import { 
   LayoutGridIcon, 
   LayersIcon, 
@@ -31,19 +30,17 @@ import {
   Gamepad2Icon,
   SparklesIcon,
   FolderIcon,
-  UtensilsIcon,
-  PackageIcon
+  UtensilsIcon
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import type { CategoryRecord, CreateCategoryInput } from "@/lib/types/category"
 import {
-  type CategoryRecord,
-  type CreateCategoryInput,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
   useGetCategoriesQuery,
-} from "@/lib/features/categories/categoriesApi"
+} from "@/lib/redux/service/categoryApi"
 
 function getCategoryVisuals(name: string) {
   const normalized = name.toLowerCase()
@@ -219,7 +216,6 @@ export default function CategoriesPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>()
   const [searchTerm, setSearchTerm] = useState("")
   const [createError, setCreateError] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [categoryToEdit, setCategoryToEdit] = useState<CategoryRecord | null>(null)
   
@@ -236,11 +232,9 @@ export default function CategoriesPage() {
     [flattenedCategories, searchTerm]
   )
 
-  const activeSelectedCategoryId = selectedCategoryId ?? filteredCategories[0]?.id
-
-  const selectedCategory = filteredCategories.find((category) => category.id === activeSelectedCategoryId) ??
-    filteredCategories[0] ??
-    null
+  const selectedCategory = selectedCategoryId
+    ? filteredCategories.find((category) => category.id === selectedCategoryId) ?? null
+    : null
 
   const treeNodes = useMemo(() => buildTree(filteredCategories), [filteredCategories])
 
@@ -259,10 +253,6 @@ export default function CategoriesPage() {
 
   const totalListings = filteredCategories.reduce((sum, category) => sum + category.listingsCount, 0)
   const popularCategory = [...filteredCategories].sort((left, right) => right.listingsCount - left.listingsCount)[0]
-  const topCategories = [...filteredCategories]
-    .sort((left, right) => right.listingsCount - left.listingsCount)
-    .slice(0, 4)
-
   const handleStartCreate = () => {
     setCategoryToEdit(null)
     setIsModalOpen(true)
@@ -290,7 +280,6 @@ export default function CategoriesPage() {
     try {
       setCreateError(null)
       const updated = await updateCategory({ id, data: payload }).unwrap()
-      setIsEditing(false)
       await refetch()
       return updated
     } catch (error) {
@@ -314,7 +303,6 @@ export default function CategoriesPage() {
       await deleteCategory(slug).unwrap()
       if (selectedCategoryId === id) {
         setSelectedCategoryId(undefined)
-        setIsEditing(false)
       }
       await refetch()
     } catch (error) {
@@ -400,16 +388,15 @@ export default function CategoriesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className={`grid grid-cols-1 gap-8 ${selectedCategory ? "lg:grid-cols-3" : ""}`}>
             {/* Left Column - Hierarchy and Directory */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className={selectedCategory ? "space-y-8 lg:col-span-2" : "space-y-8"}>
               <CategoryHierarchy
                 key={categories.length ? "category-tree-loaded" : "category-tree-empty"}
                 nodes={treeNodes}
                 selectedId={selectedCategory?.id}
                 onSelect={(id) => {
                   setSelectedCategoryId(id)
-                  setIsEditing(false)
                 }}
               />
               <CategoryDirectory
@@ -417,7 +404,6 @@ export default function CategoriesPage() {
                 selectedId={selectedCategory?.id}
                 onSelect={(id) => {
                   setSelectedCategoryId(id)
-                  setIsEditing(false)
                 }}
                 onEdit={(id) => {
                   const targetCat = flattenedCategories.find(c => c.id === id)
@@ -431,47 +417,17 @@ export default function CategoriesPage() {
               />
             </div>
 
-            {/* Right Column - Details and Charts */}
-            <div className="space-y-8">
-              <CategoryDetails
-                key={`${selectedCategory?.id}-${isEditing ? 'edit' : 'view'}`}
-                category={selectedCategory}
-                availableCategories={flattenedCategories}
-                isCreating={isCreating || isUpdating}
-                onCreate={handleCreateCategory}
-                isEditing={isEditing}
-                onUpdate={handleUpdateCategory}
-                onCancelEdit={() => setIsEditing(false)}
-                onStartCreate={handleStartCreate}
-                onStartEdit={(cat) => handleStartEdit(cat)}
-              />
-              
-              <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-                <h4 className="font-bold text-gray-900 mb-6">Listings by Category</h4>
-                <div className="space-y-6">
-                  {(topCategories.length ? topCategories : filteredCategories.slice(0, 4)).map((category, index) => (
-                    <CategoryListingsBar
-                      key={category.id}
-                      label={category.name}
-                      value={category.listingsCount >= 1000 ? `${(category.listingsCount / 1000).toFixed(1)}k` : category.listingsCount.toString()}
-                      percentage={Math.max(12, 100 - index * 18)}
-                      color={index === 0 ? "#6338f6" : index === 1 ? "#8b5cf6" : index === 2 ? "#a78bfa" : "#1f2937"}
-                    />
-                  ))}
-                </div>
+            {/* Show details only after an admin selects a category. */}
+            {selectedCategory && (
+              <div className="space-y-8">
+                <CategoryDetails
+                  category={selectedCategory}
+                  onStartEdit={(cat) => handleStartEdit(cat)}
+                />
               </div>
-
-              <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="font-bold text-gray-900">Category Growth Trend</h4>
-                  <div className="size-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 cursor-pointer">
-                    <DownloadIcon size={14} />
-                  </div>
-                </div>
-                <CategoryGrowthChart />
-              </div>
-            </div>
+            )}
           </div>
+
         </div>
         
         {/* Category Modal Popup (Handles Create & Edit with Icon Photo Upload) */}

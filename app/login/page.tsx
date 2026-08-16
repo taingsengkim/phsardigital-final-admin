@@ -1,17 +1,34 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { ShieldIcon, KeyIcon } from "lucide-react";
 
 export default function LoginPage() {
+  const hasStartedLogin = useRef(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   const handleLogin = async () => {
-    await signIn.oauth2({ 
+    setLoginError(null);
+
+    const result = await signIn.oauth2({
       providerId: "keycloak",
-      callbackURL: "/dashboard"
+      callbackURL: "/dashboard",
     });
+
+    if (result.error) {
+      setLoginError(result.error.message || "Unable to connect to Keycloak.");
+    }
   };
+
+  useEffect(() => {
+    if (hasStartedLogin.current) return;
+
+    hasStartedLogin.current = true;
+    void handleLogin();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8f9fc] flex items-center justify-center p-4 relative overflow-hidden">
@@ -33,6 +50,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Welcome Back</h1>
           <p className="text-gray-500 font-medium">Log in to Phsar Digital Admin Panel</p>
+          <p className="mt-2 text-sm text-gray-400">Redirecting to Keycloak...</p>
         </div>
 
         <div className="space-y-6">
@@ -54,6 +72,11 @@ export default function LoginPage() {
               <KeyIcon size={18} className="group-hover:rotate-12 transition-transform" />
               Sign in with Keycloak
             </Button>
+            {loginError && (
+              <p className="mt-3 text-center text-sm font-medium text-red-600">
+                {loginError}
+              </p>
+            )}
           </div>
         </div>
 
