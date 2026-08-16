@@ -17,7 +17,7 @@ export function toNumber(value: unknown) {
   return 0
 }
 
-export function extractList(response: unknown, key: "buyers" | "sellers") {
+export function extractList(response: unknown, key: "buyers" | "sellers" | "users") {
   if (Array.isArray(response)) return response
 
   const record = (response ?? {}) as Record<string, unknown>

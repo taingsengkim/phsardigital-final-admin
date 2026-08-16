@@ -1,3 +1,5 @@
+"use client"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -23,8 +25,12 @@ import {
   DollarSignIcon,
   ChevronDownIcon
 } from "lucide-react"
+import { useGetAdminDashboardSummaryQuery } from "@/lib/redux/service/dashboardApi"
 
 export default function Page() {
+  const { data: summary, isLoading, isError, refetch } = useGetAdminDashboardSummaryQuery()
+  const value = (amount?: number) => isLoading ? "..." : (amount ?? 0).toLocaleString()
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -32,36 +38,41 @@ export default function Page() {
         <DashboardHeader />
         
         <div className="p-8 space-y-8">
+          {isError && (
+            <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+              Failed to load dashboard summary. <button type="button" onClick={() => refetch()} className="font-semibold underline">Retry</button>
+            </div>
+          )}
           {/* Stats Cards - Row 1 */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard 
               title="Total Users" 
-              value="28,594" 
-              trend="12.5% vs last week" 
+              value={value(summary?.totalUsers)}
+              trend="Live from API"
               icon={UsersIcon}
               iconBgColor="bg-purple-50"
               iconColor="text-purple-600"
             />
             <StatsCard 
               title="Buyers" 
-              value="24,385" 
-              trend="8.3% vs last week" 
+              value={value(summary?.totalBuyers)}
+              trend="Live from API"
               icon={UsersIcon}
               iconBgColor="bg-blue-50"
               iconColor="text-blue-600"
             />
             <StatsCard 
               title="Sellers" 
-              value="4,209" 
-              trend="15.7% vs last week" 
+              value={value(summary?.totalSellers)}
+              trend="Live from API"
               icon={StoreIcon}
               iconBgColor="bg-indigo-50"
               iconColor="text-indigo-600"
             />
             <StatsCard 
               title="Active Listings" 
-              value="16,842" 
-              trend="9.1% vs last week" 
+              value={value(summary?.activeListings)}
+              trend="Live from API"
               icon={ShoppingBagIcon}
               iconBgColor="bg-pink-50"
               iconColor="text-pink-600"
@@ -72,8 +83,8 @@ export default function Page() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard 
               title="Pending Applications" 
-              value="56" 
-              subtext="5 new today" 
+              value={value(summary?.pendingApplications)}
+              subtext="Live from API"
               trendType="neutral"
               icon={ClipboardListIcon}
               iconBgColor="bg-purple-50"
@@ -81,8 +92,8 @@ export default function Page() {
             />
             <StatsCard 
               title="Pending Documents" 
-              value="34" 
-              subtext="3 new today" 
+              value={isLoading ? "..." : "N/A"}
+              subtext="Document endpoint required"
               trendType="neutral"
               icon={FileCheckIcon}
               iconBgColor="bg-indigo-50"
@@ -90,16 +101,16 @@ export default function Page() {
             />
             <StatsCard 
               title="Total Transactions" 
-              value="9,563" 
-              trend="11.4% vs last week" 
+              value={value(summary?.totalTransactions)}
+              trend="Live from API"
               icon={CreditCardIcon}
               iconBgColor="bg-violet-50"
               iconColor="text-violet-600"
             />
             <StatsCard 
               title="Total Revenue" 
-              value="$38,420.50" 
-              trend="14.8% vs last week" 
+              value={isLoading ? "..." : `$${(summary?.totalRevenue ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              trend="Live from API"
               icon={DollarSignIcon}
               iconBgColor="bg-blue-50"
               iconColor="text-blue-600"

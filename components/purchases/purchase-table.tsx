@@ -3,22 +3,16 @@
 import { SearchIcon, ArrowUpDownIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import type { Purchase } from "@/lib/types/purchase"
 
-const purchases = [
-  { id: "Order-2025-1030", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Shipped", date: "May 17, 2025" },
-  { id: "Order-2025-1029", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Shipped", date: "May 17, 2025" },
-  { id: "Order-2025-1028", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Processing", date: "May 17, 2025" },
-  { id: "Order-2025-1027", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Delivered", date: "May 17, 2025" },
-  { id: "Order-2025-1026", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Delivered", date: "May 17, 2025" },
-  { id: "Order-2025-1024", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Delivered", date: "May 17, 2025" },
-  { id: "Order-2025-1023", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$199.00", method: "KHQR", status: "Cancelled", date: "May 17, 2025" },
-  { id: "Order-2025-0998", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Shipped", date: "May 17, 2025" },
-  { id: "Order-2025-0997", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Shipped", date: "May 17, 2025" },
-  { id: "Order-2025-0996", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Delivered", date: "May 17, 2025" },
-  { id: "Order-2025-0999", item: "Apple iPhone 15 Pro", buyer: "S. Mealy", seller: "Tech Store Cambodia", total: "$999.00", method: "KHQR", status: "Cancelled", date: "May 17, 2025" },
-]
+interface PurchaseTableProps {
+  purchases: Purchase[]
+  selectedId: string | null
+  isLoading?: boolean
+  onSelect: (purchase: Purchase) => void
+}
 
-export function PurchaseTable() {
+export function PurchaseTable({ purchases, selectedId, isLoading, onSelect }: PurchaseTableProps) {
   const getStatusVariant = (status: string): React.ComponentProps<typeof Badge>["variant"] => {
     switch (status) {
       case 'Shipped': return 'info'
@@ -60,10 +54,15 @@ export function PurchaseTable() {
             </tr>
           </thead>
           <tbody>
-            {purchases.map((order, i) => (
+            {isLoading && purchases.length === 0 ? (
+              <tr><td colSpan={8} className="p-6 text-sm text-gray-400">Loading purchases...</td></tr>
+            ) : purchases.length === 0 ? (
+              <tr><td colSpan={8} className="p-6 text-sm text-gray-400">No purchases found.</td></tr>
+            ) : purchases.map((order) => (
               <tr 
-                key={i} 
-                className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer group"
+                key={order.id}
+                onClick={() => onSelect(order)}
+                className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer group ${selectedId === order.id ? "bg-purple-50/40" : ""}`}
               >
                 <td className="p-6 text-xs font-bold text-gray-900 group-hover:text-[#6338f6]">{order.id}</td>
                 <td className="p-6 text-xs text-gray-500">{order.item}</td>

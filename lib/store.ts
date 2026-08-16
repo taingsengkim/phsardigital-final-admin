@@ -5,6 +5,8 @@ import { marketplaceApi } from "@/lib/features/marketplace/marketplaceApi"
 import { buyerApi } from "@/lib/redux/service/buyerApi"
 import { sellerApi } from "@/lib/redux/service/sellerApi"
 import { sellerApplicationApi } from "@/lib/redux/service/sellerApplicationApi"
+import { purchaseApi } from "@/lib/redux/service/purchaseApi"
+import { dashboardApi } from "@/lib/redux/service/dashboardApi"
 
 export const makeStore = () => {
     return configureStore({
@@ -14,6 +16,8 @@ export const makeStore = () => {
             [buyerApi.reducerPath]: buyerApi.reducer,
             [sellerApi.reducerPath]: sellerApi.reducer,
             [sellerApplicationApi.reducerPath]: sellerApplicationApi.reducer,
+            [purchaseApi.reducerPath]: purchaseApi.reducer,
+            [dashboardApi.reducerPath]: dashboardApi.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware().concat(
@@ -22,6 +26,8 @@ export const makeStore = () => {
                 buyerApi.middleware,
                 sellerApi.middleware,
                 sellerApplicationApi.middleware,
+                purchaseApi.middleware,
+                dashboardApi.middleware,
             ),
     })
 }

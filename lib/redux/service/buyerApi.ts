@@ -1,7 +1,25 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
 import type { Buyer, BuyerStatus } from "@/lib/types/buyer"
-import { apiBaseUrl, extractList, toNumber, toText } from "./api-utils"
+import { extractList, toNumber, toText } from "./api-utils"
+
+function hasUserRole(value: unknown, expectedRole: "BUYER" | "SELLER") {
+  const record = (value ?? {}) as Record<string, unknown>
+  const roles = Array.isArray(record.roles) ? record.roles : []
+  const roleText = [
+    record.role,
+    record.type,
+    record.userType,
+    record.accountType,
+    ...roles.map((role) =>
+      role && typeof role === "object" ? (role as Record<string, unknown>).name : role
+    ),
+  ]
+    .map((role) => toText(role).toUpperCase())
+    .join(" ")
+
+  return roleText.includes(expectedRole)
+}
 
 function normalizeStatus(value: unknown): BuyerStatus {
   if (typeof value === "boolean") return value ? "ACTIVE" : "SUSPENDED"
@@ -32,7 +50,7 @@ function normalizeBuyer(value: unknown, index: number): Buyer {
 export const buyerApi = createApi({
   reducerPath: "buyerApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: apiBaseUrl,
+    baseUrl: "/api/admin/users",
     prepareHeaders: (headers) => {
       headers.set("accept", "application/json")
       return headers
@@ -41,9 +59,11 @@ export const buyerApi = createApi({
   tagTypes: ["Buyers"],
   endpoints: (builder) => ({
     getBuyers: builder.query<Buyer[], void>({
-      query: () => "/buyers",
+      query: () => "",
       transformResponse: (response: unknown) =>
-        extractList(response, "buyers").map(normalizeBuyer),
+        extractList(response, "users")
+          .filter((user) => hasUserRole(user, "BUYER"))
+          .map(normalizeBuyer),
       providesTags: (result) => [
         ...(result ?? []).map((buyer) => ({ type: "Buyers" as const, id: buyer.id })),
         { type: "Buyers" as const, id: "LIST" },
