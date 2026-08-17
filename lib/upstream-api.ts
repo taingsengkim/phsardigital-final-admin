@@ -11,9 +11,25 @@ export async function proxyUpstreamRequest(
 ) {
   try {
     const authHeaders = await getAuthHeader(request)
+    const requestContentType = request.headers.get("content-type")
+    const requestBody = ["POST", "PATCH", "PUT"].includes(method)
+      ? await request.text().catch(() => null)
+      : null
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      ...authHeaders,
+    }
+    if (requestContentType) {
+      headers["Content-Type"] = requestContentType
+    } else if (requestBody) {
+      headers["Content-Type"] = "application/json"
+    }
+
     const upstreamResponse = await fetch(`${upstreamApiUrl}${path}`, {
       method,
-      headers: { Accept: "application/json", ...authHeaders },
+      headers,
+      body: requestBody || undefined,
       cache: "no-store",
     })
     const body = await upstreamResponse.text()

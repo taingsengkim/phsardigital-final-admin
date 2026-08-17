@@ -1,5 +1,8 @@
+"use client"
+
+import { useState, useMemo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { SearchIcon, FilterIcon } from "lucide-react"
+import { SearchIcon, FilterIcon, CheckCircle2Icon, XCircleIcon, ClockIcon, MapPinIcon, RefreshCwIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import type { SellerApplication } from "@/lib/types/seller-application"
@@ -9,127 +12,290 @@ interface ApplicationTableProps {
   selectedApplicationId: string | null
   onSelectApplication: (application: SellerApplication) => void
   isLoading?: boolean
+  onRefresh?: () => void
 }
+
+type StatusTab = "ALL" | "PENDING" | "APPROVED" | "REJECTED"
 
 export function ApplicationTable({
   applications,
   selectedApplicationId,
   onSelectApplication,
   isLoading,
+  onRefresh,
 }: ApplicationTableProps) {
+  const [activeTab, setActiveTab] = useState<StatusTab>("ALL")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 8
+
+  const counts = useMemo(() => {
+    return {
+      ALL: applications.length,
+      PENDING: applications.filter((a) => a.status.toUpperCase().includes("PENDING")).length,
+      APPROVED: applications.filter((a) => a.status.toUpperCase().includes("APPROVED")).length,
+      REJECTED: applications.filter((a) => a.status.toUpperCase().includes("REJECTED")).length,
+    }
+  }, [applications])
+
+  const filteredApplications = useMemo(() => {
+    return applications.filter((app) => {
+      // Filter by tab
+      const statusUpper = app.status.toUpperCase()
+      if (activeTab === "PENDING" && !statusUpper.includes("PENDING")) return false
+      if (activeTab === "APPROVED" && !statusUpper.includes("APPROVED")) return false
+      if (activeTab === "REJECTED" && !statusUpper.includes("REJECTED")) return false
+
+      // Filter by search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase()
+        const matchName = app.name.toLowerCase().includes(query)
+        const matchBusiness = app.businessName.toLowerCase().includes(query)
+        const matchEmail = app.email.toLowerCase().includes(query) || app.businessEmail.toLowerCase().includes(query)
+        const matchLocation = app.location.toLowerCase().includes(query)
+        if (!matchName && !matchBusiness && !matchEmail && !matchLocation) return false
+      }
+
+      return true
+    })
+  }, [applications, activeTab, searchQuery])
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredApplications.length / pageSize) || 1
+  const paginatedApplications = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredApplications.slice(start, start + pageSize)
+  }, [filteredApplications, currentPage, pageSize])
+
+  const handleTabChange = (tab: StatusTab) => {
+    setActiveTab(tab)
+    setCurrentPage(1)
+  }
+
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-      <div className="p-6 border-b border-gray-50 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-96">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
-          <Input 
-            placeholder="Search by name, email or phone..." 
-            className="pl-10 bg-gray-50 border-none rounded-xl h-11"
-          />
+    <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs flex flex-col">
+      {/* Top Header Controls: Search & Tabs */}
+      <div className="p-6 border-b border-gray-100 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white">
+        {/* Status Filter Tabs */}
+        <div className="flex items-center p-1 bg-gray-100/80 rounded-2xl overflow-x-auto shrink-0 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => handleTabChange("ALL")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === "ALL"
+                ? "bg-white text-gray-900 shadow-xs"
+                : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            All <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-gray-200 text-gray-700">{counts.ALL}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("PENDING")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === "PENDING"
+                ? "bg-white text-amber-800 shadow-xs"
+                : "text-gray-500 hover:text-amber-800"
+            }`}
+          >
+            <ClockIcon size={14} className="text-amber-500" />
+            Pending <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800">{counts.PENDING}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("APPROVED")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === "APPROVED"
+                ? "bg-white text-emerald-800 shadow-xs"
+                : "text-gray-500 hover:text-emerald-800"
+            }`}
+          >
+            <CheckCircle2Icon size={14} className="text-emerald-500" />
+            Approved <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800">{counts.APPROVED}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("REJECTED")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === "REJECTED"
+                ? "bg-white text-rose-800 shadow-xs"
+                : "text-gray-500 hover:text-rose-800"
+            }`}
+          >
+            <XCircleIcon size={14} className="text-rose-500" />
+            Rejected <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-800">{counts.REJECTED}</span>
+          </button>
         </div>
-        
-        <Button variant="outline" className="rounded-xl border-gray-200 h-11 px-6 font-semibold flex items-center gap-2">
-          <FilterIcon size={16} />
-          Filters
-        </Button>
+
+        {/* Search & Refresh Bar */}
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-72">
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
+            <Input 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(1)
+              }}
+              placeholder="Search seller, business or city..." 
+              className="pl-10 bg-gray-50 border-gray-200 focus-visible:bg-white rounded-xl h-10 text-xs"
+            />
+          </div>
+
+          {onRefresh && (
+            <Button
+              variant="outline"
+              onClick={onRefresh}
+              className="rounded-xl border-gray-200 h-10 px-3.5 font-semibold text-xs flex items-center gap-1.5 text-gray-600 hover:text-gray-900"
+              title="Refresh List"
+            >
+              <RefreshCwIcon size={14} className={isLoading ? "animate-spin text-[#6338f6]" : ""} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          )}
+        </div>
       </div>
-      
+
+      {/* Main Responsive Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
-            <tr className="border-b border-gray-50">
-              <th className="p-6 w-12">
-                <input type="checkbox" className="size-4 rounded border-gray-300 text-[#6338f6] focus:ring-[#6338f6]" />
-              </th>
-              <th className="p-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Applicant</th>
-              <th className="p-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Business Name</th>
-              <th className="p-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Plan</th>
-              <th className="p-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Applied On</th>
+            <tr className="border-b border-gray-100 bg-gray-50/50">
+              <th className="py-4 px-6 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Business & Applicant</th>
+              <th className="py-4 px-6 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Business Type</th>
+              <th className="py-4 px-6 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="py-4 px-6 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+              <th className="py-4 px-6 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Applied Date</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-100 text-xs">
             {isLoading && applications.length === 0 ? (
-              <tr><td colSpan={5} className="p-6 text-sm text-gray-400">Loading applications...</td></tr>
-            ) : applications.length === 0 ? (
-              <tr><td colSpan={5} className="p-6 text-sm text-gray-400">No seller applications found.</td></tr>
-            ) : applications.map((app) => (
-              <tr 
-                key={app.id} 
-                onClick={() => onSelectApplication(app)}
-                className={
-                  selectedApplicationId === app.id
-                    ? "cursor-pointer bg-blue-50/50"
-                    : "cursor-pointer transition-colors hover:bg-gray-50"
-                }
-              >
-                <td className="p-6">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedApplicationId === app.id}
-                    onChange={() => onSelectApplication(app)}
-                    onClick={(event) => event.stopPropagation()}
-                    readOnly
-                    className="size-4 rounded border-gray-300 text-[#6338f6] focus:ring-[#6338f6]" 
-                  />
-                </td>
-                <td className="p-6">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-10">
-                      <AvatarImage src={app.avatar ?? undefined} />
-                      <AvatarFallback className="bg-purple-100 text-purple-700 font-bold">
-                        {app.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{app.name}</p>
-                      <p className="text-[10px] text-gray-400">{app.id}</p>
-                    </div>
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-gray-400">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <RefreshCwIcon className="size-6 animate-spin text-[#6338f6]" />
+                    <p className="font-semibold text-sm">Loading seller applications...</p>
                   </div>
                 </td>
-                <td className="p-6 text-sm text-gray-900 font-medium">{app.businessName}</td>
-                <td className="p-6">
-                  <span className={`px-2 py-1 rounded text-[10px] font-bold ${app.planColor}`}>
-                    {app.plan}
-                  </span>
-                </td>
-                <td className="p-6">
-                  <p className="text-sm text-gray-900 font-medium">{app.appliedOn}</p>
-                  <p className="text-[10px] text-gray-400">{app.appliedAt}</p>
+              </tr>
+            ) : paginatedApplications.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-gray-400">
+                  <p className="font-semibold text-sm">No seller applications match your criteria.</p>
+                  <p className="text-xs text-gray-400 mt-1">Try clearing filters or search parameters.</p>
                 </td>
               </tr>
-            ))}
+            ) : (
+              paginatedApplications.map((app) => {
+                const isSelected = selectedApplicationId === app.id
+                const isApproved = app.status.toUpperCase().includes("APPROVED")
+                const isRejected = app.status.toUpperCase().includes("REJECTED")
+
+                return (
+                  <tr 
+                    key={app.id} 
+                    onClick={() => onSelectApplication(app)}
+                    className={`cursor-pointer transition-colors ${
+                      isSelected
+                        ? "bg-purple-50/60 font-medium"
+                        : "hover:bg-gray-50/80"
+                    }`}
+                  >
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="size-10 border border-gray-100 shadow-2xs">
+                          <AvatarImage src={app.logoUri || app.avatar || undefined} />
+                          <AvatarFallback className="bg-purple-100 text-purple-700 font-bold text-xs">
+                            {(app.businessName || app.name).substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{app.businessName}</p>
+                          <p className="text-xs text-gray-500">{app.name} • <span className="text-gray-400">{app.email}</span></p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="font-semibold text-gray-700">{app.businessType}</span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-1 text-gray-600">
+                        <MapPinIcon size={12} className="text-gray-400 shrink-0" />
+                        <span className="truncate max-w-[160px]" title={app.location}>{app.location}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      {isApproved && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2Icon size={12} /> Approved
+                        </span>
+                      )}
+                      {isRejected && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <XCircleIcon size={12} /> Rejected
+                        </span>
+                      )}
+                      {!isApproved && !isRejected && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                          <ClockIcon size={12} /> Pending
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6">
+                      <p className="text-xs font-semibold text-gray-900">{app.appliedOn}</p>
+                      <p className="text-[10px] text-gray-400">{app.appliedAt}</p>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>
-      
-      <div className="p-6 flex items-center justify-between border-t border-gray-50">
-        <p className="text-sm text-gray-400">
-          Showing <span className="text-gray-900 font-medium">1 to {applications.length}</span> of <span className="text-gray-900 font-medium">{applications.length}</span> applications
+
+      {/* Bottom Pagination Bar */}
+      <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
+        <p className="text-xs text-gray-500">
+          Showing <span className="text-gray-900 font-bold">{filteredApplications.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to{" "}
+          <span className="text-gray-900 font-bold">{Math.min(currentPage * pageSize, filteredApplications.length)}</span> of{" "}
+          <span className="text-gray-900 font-bold">{filteredApplications.length}</span> applications
         </p>
-        
-        <div className="flex items-center gap-2">
-          <button className="size-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100">
-            &lt;
-          </button>
-          <button className="size-8 rounded-lg flex items-center justify-center bg-[#6338f6] text-white font-bold text-sm">
-            1
-          </button>
-          <button className="size-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 font-medium text-sm">
-            2
-          </button>
-          <button className="size-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 font-medium text-sm">
-            3
-          </button>
-          <button className="size-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 font-medium text-sm">
-            4
-          </button>
-          <span className="text-gray-400 px-1">...</span>
-          <button className="size-8 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 font-medium text-sm">
-            8
-          </button>
-          <button className="size-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100">
-            &gt;
-          </button>
+
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            className="rounded-xl border-gray-200 h-8 px-3 text-xs font-semibold"
+          >
+            Prev
+          </Button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+            <button
+              key={pageNum}
+              type="button"
+              onClick={() => setCurrentPage(pageNum)}
+              className={`size-8 rounded-xl font-bold text-xs flex items-center justify-center transition-all ${
+                currentPage === pageNum
+                  ? "bg-[#6338f6] text-white shadow-xs"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {pageNum}
+            </button>
+          ))}
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            className="rounded-xl border-gray-200 h-8 px-3 text-xs font-semibold"
+          >
+            Next
+          </Button>
         </div>
       </div>
     </div>
