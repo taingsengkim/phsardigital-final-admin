@@ -13,13 +13,19 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setLoginError(null);
 
-    const result = await signIn.oauth2({
-      providerId: "keycloak",
-      callbackURL: "/dashboard",
-    });
+    try {
+      const result = await signIn.oauth2({
+        providerId: "keycloak",
+        callbackURL: "/dashboard",
+      });
 
-    if (result.error) {
-      setLoginError(result.error.message || "Unable to connect to Keycloak.");
+      if (result?.error) {
+        setLoginError(result.error.message || "Unable to connect to Keycloak.");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unable to connect to Keycloak.";
+      console.error("Keycloak login error:", err);
+      setLoginError(message);
     }
   };
 
