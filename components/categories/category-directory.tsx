@@ -104,9 +104,7 @@ export function CategoryDirectory({ categories, selectedId, onSelect, onEdit, on
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`Are you sure you want to delete "${cat.name}"? This action cannot be undone.`)) {
-                          onDelete?.(cat.id);
-                        }
+                        onDelete?.(cat.id);
                       }}
                     >
                       <Trash2Icon size={16} />

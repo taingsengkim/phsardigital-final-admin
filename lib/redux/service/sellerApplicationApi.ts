@@ -83,8 +83,31 @@ function normalizeApplication(value: unknown, index = 0): SellerApplication {
   const locationParts = [address, city, province].filter(Boolean)
   const location = locationParts.length > 0 ? locationParts.join(", ") : toText(record.location, "Not provided")
 
-  const lat = typeof record.latitude === "number" ? record.latitude : null
-  const lng = typeof record.longitude === "number" ? record.longitude : null
+  function parseCoordinate(val: unknown): number | null {
+    if (typeof val === "number" && Number.isFinite(val)) return val
+    if (typeof val === "string" && val.trim()) {
+      const parsed = Number(val.trim())
+      if (Number.isFinite(parsed)) return parsed
+    }
+    return null
+  }
+
+  let lat = parseCoordinate(record.latitude ?? record.lat ?? record.locationLat ?? business.latitude ?? business.lat)
+  let lng = parseCoordinate(record.longitude ?? record.lng ?? record.locationLng ?? business.longitude ?? business.lng)
+
+  let googleMapUrl = toText(record.googleMapUrl) || toText(record.google_map_url) || toText(business.googleMapUrl)
+
+  if ((lat === null || lng === null) && googleMapUrl) {
+    const match = googleMapUrl.match(/(?:q=|@)([\d.-]+),([\d.-]+)/)
+    if (match) {
+      if (lat === null) lat = parseCoordinate(match[1])
+      if (lng === null) lng = parseCoordinate(match[2])
+    }
+  }
+
+  if (!googleMapUrl && lat !== null && lng !== null) {
+    googleMapUrl = `https://www.google.com/maps?q=${lat},${lng}`
+  }
 
   let planColor = "text-purple-600 bg-purple-50"
   if (status.includes("APPROVED")) {
@@ -110,7 +133,7 @@ function normalizeApplication(value: unknown, index = 0): SellerApplication {
     location,
     latitude: lat,
     longitude: lng,
-    googleMapUrl: toText(record.googleMapUrl) || (lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : null),
+    googleMapUrl: googleMapUrl || (lat !== null && lng !== null ? `https://maps.google.com/?q=${lat},${lng}` : null),
     website: toText(record.website) || toText(record.socialUrl) || toText(business.website) || "",
     description: toText(record.description) || toText(record.aboutBusiness) || "No description provided.",
     status,

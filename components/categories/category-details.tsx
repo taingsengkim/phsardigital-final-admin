@@ -1,6 +1,6 @@
 "use client"
 
-import { FolderIcon, PencilIcon, UploadIcon } from "lucide-react"
+import { FolderIcon, PencilIcon, Trash2Icon, UploadIcon } from "lucide-react"
 
 import type { CategoryRecord } from "@/lib/types/category"
 import { Button } from "@/components/ui/button"
@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button"
 interface CategoryDetailsProps {
   category: CategoryRecord | null
   onStartEdit?: (category: CategoryRecord) => void
+  onStartDelete?: (category: CategoryRecord) => void
 }
 
-export function CategoryDetails({ category, onStartEdit }: CategoryDetailsProps) {
+export function CategoryDetails({ category, onStartEdit, onStartDelete }: CategoryDetailsProps) {
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center shadow-sm">
@@ -18,15 +19,29 @@ export function CategoryDetails({ category, onStartEdit }: CategoryDetailsProps)
           <span className="rounded-full bg-purple-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#6338f6]">
             Category Details
           </span>
-          {category && onStartEdit && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onStartEdit(category)}
-              className="flex h-8 items-center gap-1 rounded-xl border-gray-200 px-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50"
-            >
-              <PencilIcon size={13} /> Edit
-            </Button>
+          {category && (
+            <div className="flex items-center gap-2">
+              {onStartEdit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onStartEdit(category)}
+                  className="flex h-8 items-center gap-1 rounded-xl border-gray-200 px-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                >
+                  <PencilIcon size={13} /> Edit
+                </Button>
+              )}
+              {onStartDelete && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onStartDelete(category)}
+                  className="flex h-8 items-center gap-1 rounded-xl border-rose-200 bg-rose-50 px-2.5 text-xs font-bold text-rose-600 hover:bg-rose-100"
+                >
+                  <Trash2Icon size={13} /> Delete
+                </Button>
+              )}
+            </div>
           )}
         </div>
 

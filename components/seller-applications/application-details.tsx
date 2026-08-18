@@ -186,6 +186,16 @@ export function ApplicationDetails({ application, onClose }: ApplicationDetailsP
                 </span>
                 <span className="font-bold text-gray-900 text-right">{details.location}</span>
               </div>
+              {(details.latitude !== null || details.longitude !== null) && (
+                <div className="flex items-start justify-between gap-2 border-t border-gray-100/60 pt-3">
+                  <span className="text-gray-400 font-medium flex items-center gap-1">
+                    <MapPinIcon size={12} /> Coordinates (Lat, Long)
+                  </span>
+                  <span className="font-mono text-xs font-bold text-gray-900 text-right">
+                    {details.latitude ?? "--"}, {details.longitude ?? "--"}
+                  </span>
+                </div>
+              )}
               {details.website && (
                 <div className="flex items-start justify-between gap-2 border-t border-gray-100/60 pt-3">
                   <span className="text-gray-400 font-medium flex items-center gap-1">

@@ -13,6 +13,7 @@ import { CategoryHierarchy, type CategoryTreeNode } from "@/components/categorie
 import { CategoryDirectory, type CategoryDirectoryItem } from "@/components/categories/category-directory"
 import { CategoryDetails } from "@/components/categories/category-details"
 import { AddCategoryModal } from "@/components/categories/add-category-modal"
+import { DeleteCategoryDialog } from "@/components/categories/delete-category-dialog"
 import { 
   LayoutGridIcon, 
   LayersIcon, 
@@ -218,10 +219,11 @@ export default function CategoriesPage() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [categoryToEdit, setCategoryToEdit] = useState<CategoryRecord | null>(null)
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryRecord | null>(null)
   
   const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation()
   const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation()
-  const [deleteCategory] = useDeleteCategoryMutation()
+  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation()
 
   const flattenedCategories = useMemo(() => flattenCategories(categories), [categories])
   const filteredCategories = useMemo(
@@ -295,18 +297,27 @@ export default function CategoriesPage() {
     return handleCreateCategory(payload)
   }
 
-  const handleDeleteCategory = async (id: string) => {
+  const handleDeleteRequest = (id: string) => {
+    const targetCat = flattenedCategories.find(c => c.id === id)
+    if (targetCat) {
+      setCategoryToDelete(targetCat)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return
     try {
       setCreateError(null)
-      const categoryToDelete = flattenedCategories.find(c => c.id === id)
-      const slug = categoryToDelete?.slug || id
+      const slug = categoryToDelete.slug || categoryToDelete.id
       await deleteCategory(slug).unwrap()
-      if (selectedCategoryId === id) {
+      if (selectedCategoryId === categoryToDelete.id) {
         setSelectedCategoryId(undefined)
       }
+      setCategoryToDelete(null)
       await refetch()
     } catch (error) {
       setCreateError(getErrorMessage(error))
+      setCategoryToDelete(null)
     }
   }
 
@@ -411,7 +422,7 @@ export default function CategoriesPage() {
                     handleStartEdit(targetCat)
                   }
                 }}
-                onDelete={handleDeleteCategory}
+                onDelete={handleDeleteRequest}
                 onStartCreate={handleStartCreate}
                 isLoading={isLoading}
               />
@@ -423,6 +434,7 @@ export default function CategoriesPage() {
                 <CategoryDetails
                   category={selectedCategory}
                   onStartEdit={(cat) => handleStartEdit(cat)}
+                  onStartDelete={(cat) => setCategoryToDelete(cat)}
                 />
               </div>
             )}
@@ -441,6 +453,15 @@ export default function CategoriesPage() {
           availableCategories={flattenedCategories}
           isSubmitting={isCreating || isUpdating}
           onSubmit={handleSaveModalCategory}
+        />
+
+        {/* Delete Category Confirmation Dialog Popup */}
+        <DeleteCategoryDialog
+          isOpen={Boolean(categoryToDelete)}
+          categoryName={categoryToDelete?.name}
+          isDeleting={isDeleting}
+          onClose={() => setCategoryToDelete(null)}
+          onConfirm={handleConfirmDelete}
         />
 
         {/* Floating Action Button for Export as shown in bottom right of image */}
