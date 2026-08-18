@@ -1,6 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
 import { MoreHorizontalIcon, SearchIcon, FilterIcon, DownloadIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -182,7 +181,15 @@ export function SubscriptionTable() {
                 <td className="p-6 text-sm text-gray-900 font-bold">{sub.amount}</td>
                 <td className="p-6">
                   {sub.amount !== "$0.00" ? (
-                    <Switch defaultChecked={sub.autoRenew} />
+                    <span
+                      className={`inline-block rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        sub.autoRenew
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-gray-200 bg-gray-50 text-gray-500"
+                      }`}
+                    >
+                      {sub.autoRenew ? "Enabled" : "Disabled"}
+                    </span>
                   ) : (
                     <span className="text-gray-300">—</span>
                   )}

@@ -1,3 +1,5 @@
+"use client"
+
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -16,11 +18,36 @@ import {
   ZapIcon,
   CrownIcon,
   BriefcaseIcon,
-  DiamondIcon
+  DiamondIcon,
+  RefreshCwIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useGetSubscriptionPlansQuery } from "@/lib/redux/service/subscriptionApi"
+import { useGetAdminDashboardSummaryQuery } from "@/lib/redux/service/dashboardApi"
 
 export default function SubscriptionsPage() {
+  const { data: plans = [], isLoading: isPlansLoading, refetch: refetchPlans } = useGetSubscriptionPlansQuery()
+  const { data: summary, isLoading: isSummaryLoading } = useGetAdminDashboardSummaryQuery()
+
+  const activeSubscribers = summary?.activeSubscriptions ?? 0
+  const monthlyRevenue = summary?.completedSalesValue ?? summary?.totalRevenue ?? 0
+
+  const getPlanIcon = (planName: string) => {
+    const name = planName.toUpperCase()
+    if (name.includes("BASIC")) return <ZapIcon className="size-6 text-blue-600" />
+    if (name.includes("STANDARD") || name.includes("PRO")) return <CrownIcon className="size-6 text-purple-600" />
+    if (name.includes("PREMIUM") || name.includes("BUSINESS")) return <BriefcaseIcon className="size-6 text-indigo-600" />
+    return <DiamondIcon className="size-6 text-amber-600" />
+  }
+
+  const getPlanBg = (planName: string) => {
+    const name = planName.toUpperCase()
+    if (name.includes("BASIC")) return "bg-blue-50"
+    if (name.includes("STANDARD") || name.includes("PRO")) return "bg-purple-50"
+    if (name.includes("PREMIUM") || name.includes("BUSINESS")) return "bg-indigo-50"
+    return "bg-amber-50"
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -30,11 +57,19 @@ export default function SubscriptionsPage() {
           description="Create and manage subscription plans and monitor active subscriptions."
         >
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => refetchPlans()}
+              className="rounded-xl border-gray-200 h-11 px-4 font-semibold flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50"
+            >
+              <RefreshCwIcon size={16} className={isPlansLoading ? "animate-spin" : ""} />
+              Refresh Plans
+            </Button>
             <Button variant="outline" className="rounded-xl border-gray-200 h-11 px-6 font-semibold flex items-center gap-2 bg-white text-gray-700">
               <SettingsIcon size={16} />
               Subscription Settings
             </Button>
-            <Button className="rounded-xl bg-[#6338f6] hover:bg-[#532edb] h-11 px-6 font-semibold flex items-center gap-2">
+            <Button className="rounded-xl bg-[#6338f6] hover:bg-[#532edb] h-11 px-6 font-semibold flex items-center gap-2 shadow-sm shadow-purple-500/20">
               <PlusIcon size={16} />
               Create New Plan
             </Button>
@@ -46,8 +81,8 @@ export default function SubscriptionsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatsCard 
               title="ACTIVE SUBSCRIBERS" 
-              value="128" 
-              trend="+ 12%" 
+              value={isSummaryLoading ? "..." : activeSubscribers.toLocaleString()} 
+              trend="Live from API" 
               trendType="up"
               icon={UsersIcon}
               iconBgColor="bg-blue-50"
@@ -55,8 +90,8 @@ export default function SubscriptionsPage() {
             />
             <StatsCard 
               title="MONTHLY REVENUE" 
-              value="$1,278.72" 
-              trend="+ 8.5%" 
+              value={isSummaryLoading ? "..." : `$${monthlyRevenue.toFixed(2)}`} 
+              trend="Live from API" 
               trendType="up"
               icon={DollarSignIcon}
               iconBgColor="bg-emerald-50"
@@ -64,9 +99,9 @@ export default function SubscriptionsPage() {
             />
             <StatsCard 
               title="CANCELLATION RATE" 
-              value="4.2%" 
-              trend="- 0.5%" 
-              trendType="down"
+              value="0.0%" 
+              trend="Standard" 
+              trendType="neutral"
               icon={TrendingDownIcon}
               iconBgColor="bg-rose-50"
               iconColor="text-rose-500"
@@ -76,59 +111,36 @@ export default function SubscriptionsPage() {
           {/* Subscription Plans Section */}
           <div>
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6">Subscription Plans</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <PlanCard 
-                title="Basic Plan"
-                description="For new sellers getting started"
-                price="$0"
-                features={[
-                  "Up to 5 active listings",
-                  "Basic store profile",
-                  "Standard support"
-                ]}
-                icon={<ZapIcon className="size-6 text-blue-600" />}
-                iconBgColor="bg-blue-50"
-              />
-              <PlanCard 
-                title="Pro Plan"
-                description="For growing businesses"
-                price="$9.99"
-                features={[
-                  "Up to 50 active listings",
-                  "Featured listings (5)",
-                  "Custom store profile",
-                  "Priority support"
-                ]}
-                icon={<CrownIcon className="size-6 text-purple-600" />}
-                iconBgColor="bg-purple-50"
-                isActive={true}
-              />
-              <PlanCard 
-                title="Business Plan"
-                description="For established businesses"
-                price="$24.99"
-                features={[
-                  "Unlimited active listings",
-                  "Featured listings (20)",
-                  "Custom store & branding",
-                  "Analytics & insights"
-                ]}
-                icon={<BriefcaseIcon className="size-6 text-indigo-600" />}
-                iconBgColor="bg-indigo-50"
-              />
-              <PlanCard 
-                title="Enterprise Plan"
-                description="For large organizations"
-                price="$49.99"
-                features={[
-                  "Everything in Business",
-                  "Top placement",
-                  "Dedicated account manager",
-                  "Custom solutions"
-                ]}
-                icon={<DiamondIcon className="size-6 text-amber-600" />}
-                iconBgColor="bg-amber-50"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isPlansLoading && plans.length === 0 ? (
+                <div className="col-span-full p-8 text-center text-sm text-gray-400">
+                  Loading subscription plans from API...
+                </div>
+              ) : (
+                plans.map((planItem) => {
+                  const limitText = planItem.listingLimit === null
+                    ? "Unlimited active listings"
+                    : `Up to ${planItem.listingLimit} active listings`
+
+                  return (
+                    <PlanCard 
+                      key={planItem.plan}
+                      title={`${planItem.displayName} Plan`}
+                      description={`Valid for ${planItem.durationDays} days`}
+                      price={`$${planItem.priceUsd.toFixed(2)}`}
+                      features={[
+                        limitText,
+                        "Store profile & catalog",
+                        "Live chat & messaging support",
+                        "Featured marketplace visibility",
+                      ]}
+                      icon={getPlanIcon(planItem.plan)}
+                      iconBgColor={getPlanBg(planItem.plan)}
+                      isActive={planItem.plan === "STANDARD"}
+                    />
+                  )
+                })
+              )}
             </div>
           </div>
 

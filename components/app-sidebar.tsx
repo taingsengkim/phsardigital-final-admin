@@ -153,7 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarCollapseToggle />
 
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:px-3 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
-        <div className="flex items-center gap-3 overflow-hidden">
+        <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden hover:opacity-90 transition-opacity">
           {/* Expanded state: white rounded box with logo */}
           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white overflow-hidden group-data-[collapsible=icon]:hidden">
             <Image
@@ -177,10 +177,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="truncate font-bold text-lg">Phsar Digital</span>
+            <span className="truncate font-bold text-lg text-white">Phsar Digital</span>
             <span className="truncate text-xs text-white/70">Admin Panel</span>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent className="px-2">
         <SidebarMenu>

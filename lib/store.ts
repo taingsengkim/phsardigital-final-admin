@@ -7,6 +7,7 @@ import { sellerApi } from "@/lib/redux/service/sellerApi"
 import { sellerApplicationApi } from "@/lib/redux/service/sellerApplicationApi"
 import { purchaseApi } from "@/lib/redux/service/purchaseApi"
 import { dashboardApi } from "@/lib/redux/service/dashboardApi"
+import { subscriptionApi } from "@/lib/redux/service/subscriptionApi"
 
 export const makeStore = () => {
     return configureStore({
@@ -18,6 +19,7 @@ export const makeStore = () => {
             [sellerApplicationApi.reducerPath]: sellerApplicationApi.reducer,
             [purchaseApi.reducerPath]: purchaseApi.reducer,
             [dashboardApi.reducerPath]: dashboardApi.reducer,
+            [subscriptionApi.reducerPath]: subscriptionApi.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware().concat(
@@ -28,6 +30,7 @@ export const makeStore = () => {
                 sellerApplicationApi.middleware,
                 purchaseApi.middleware,
                 dashboardApi.middleware,
+                subscriptionApi.middleware,
             ),
     })
 }
