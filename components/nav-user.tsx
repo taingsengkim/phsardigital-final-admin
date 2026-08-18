@@ -98,9 +98,8 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
+            <DropdownMenuItem onClick={() => window.location.assign("/logout")}>
+              <LogOutIcon />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -8,7 +8,7 @@ const db = new Database(path.join(process.cwd(), ".better-auth.db"));
 
 export const auth = betterAuth({
   database: db,
-  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001",
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   plugins: [
     genericOAuth({
       config: [

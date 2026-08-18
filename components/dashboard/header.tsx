@@ -17,10 +17,9 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const { data: session } = useSession()
 
-  const handleSignOut = async () => {
-    await signOut()
-    window.location.assign("/login")
-  }
+  const handleSignOut = () => {
+    window.location.assign("/logout");
+  };
 
   return (
     <header className="flex h-20 shrink-0 items-center justify-between px-8 border-b border-gray-100 bg-white">
