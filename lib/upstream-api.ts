@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { getAuthHeader } from "@/lib/auth"
+import { getAuthHeader, requireAdmin } from "@/lib/auth"
 
 const upstreamApiUrl = (process.env.UPSTREAM_API_URL ?? "https://phsardigital.quizzy.it.com/api/v1").replace(/\/$/, "")
 
@@ -9,6 +9,9 @@ export async function proxyUpstreamRequest(
   path: string,
   method: "GET" | "PATCH",
 ) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   try {
     const authHeaders = await getAuthHeader(request)
     const requestContentType = request.headers.get("content-type")

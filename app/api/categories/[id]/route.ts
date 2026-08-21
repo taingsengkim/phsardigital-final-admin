@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthHeader } from "@/lib/auth";
+import { getAuthHeader, requireAdmin } from "@/lib/auth";
 
 const BASE_URL = process.env.UPSTREAM_API_URL ?? "https://phsardigital.quizzy.it.com/api/v1";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const payload = await request.json();
@@ -48,6 +51,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const authHeaders = await getAuthHeader(request);

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server"
-import { getAuthHeader } from "@/lib/auth"
+import { getAuthHeader, requireAdmin } from "@/lib/auth"
 import type { AdminDashboardSummary } from "@/lib/types/dashboard"
 
 const upstreamApiUrl = (process.env.UPSTREAM_API_URL ?? "https://phsardigital.quizzy.it.com/api/v1").replace(/\/$/, "")
 
 export async function GET(request: Request) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
   const authHeaders = await getAuthHeader(request)
   if (!authHeaders.Authorization) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 })

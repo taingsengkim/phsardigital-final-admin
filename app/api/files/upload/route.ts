@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthHeader } from "@/lib/auth";
+import { getAuthHeader, requireAdmin } from "@/lib/auth";
 
 const BASE_URL = process.env.UPSTREAM_API_URL ?? "https://phsardigital.quizzy.it.com/api/v1";
 
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
+
   try {
     const formData = await request.formData();
     const authHeaders = await getAuthHeader(request);
