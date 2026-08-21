@@ -57,7 +57,12 @@ export function RejectionDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reject-application-title"
+        className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-rose-50/50">
           <div className="flex items-center gap-3">
@@ -65,14 +70,15 @@ export function RejectionDialog({
               <XCircleIcon size={22} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900">Reject Application</h3>
-              <p className="text-xs text-gray-500">{businessName} • {applicantName}</p>
+              <h3 id="reject-application-title" className="text-lg font-bold text-gray-900">Reject Application</h3>
+              <p className="text-xs text-gray-500">{businessName} · Applicant {applicantName}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             disabled={isRejecting}
             type="button"
+            aria-label="Close rejection dialog"
             className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
             <XIcon size={18} />
