@@ -17,12 +17,9 @@ import {
   LayoutDashboardIcon,
   UsersIcon,
   StoreIcon,
-  ClipboardListIcon,
-  FileCheckIcon,
   CreditCardIcon,
   ListIcon,
   ShieldCheckIcon,
-  StarIcon,
   ShoppingBagIcon,
   BellIcon,
   BarChart3Icon,
@@ -62,16 +59,6 @@ const data = {
       icon: <StoreIcon />,
     },
     {
-      title: "Seller Applications",
-      url: "/dashboard/seller-applications",
-      icon: <ClipboardListIcon />,
-    },
-    {
-      title: "Documents Review",
-      url: "/dashboard/documents-review",
-      icon: <FileCheckIcon />,
-    },
-    {
       title: "Subscriptions",
       url: "/dashboard/subscriptions",
       icon: <CreditCardIcon />,
@@ -85,11 +72,6 @@ const data = {
       title: "Listings Moderation",
       url: "/dashboard/listings-moderation",
       icon: <ShieldCheckIcon />,
-    },
-    {
-      title: "Reviews Moderation",
-      url: "/dashboard/reviews-moderation",
-      icon: <StarIcon />,
     },
     {
       title: "Purchases",

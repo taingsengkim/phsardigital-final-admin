@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  XIcon, 
-  CheckCircle2Icon, 
+import { DashboardHeader } from "@/components/dashboard/header"
+import {
+  ArrowLeftIcon,
+  XIcon,
+  CheckCircle2Icon,
   XCircleIcon, 
   RotateCcwIcon, 
   FileTextIcon,
@@ -19,7 +22,6 @@ import {
   ShieldAlertIcon,
   DownloadIcon
 } from "lucide-react"
-import type { SellerApplication } from "@/lib/types/seller-application"
 import {
   useApproveSellerApplicationMutation,
   useGetSellerApplicationQuery,
@@ -27,21 +29,72 @@ import {
 } from "@/lib/redux/service/sellerApplicationApi"
 import { RejectionDialog } from "./rejection-dialog"
 
+const BACK_HREF = "/dashboard/sellers"
+
 interface ApplicationDetailsProps {
-  application: SellerApplication
-  onClose: () => void
+  /** Application UUID from the route. The record is fetched by id. */
+  applicationId: string
 }
 
-export function ApplicationDetails({ application, onClose }: ApplicationDetailsProps) {
-  const { data: applicationDetails, isFetching, refetch } = useGetSellerApplicationQuery(application.id)
+function DetailsShell({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <DashboardHeader title="Application Details" description="Review a seller registration request.">
+        <Link
+          href={BACK_HREF}
+          className="rounded-xl border border-gray-200 bg-white h-10 px-4 font-semibold text-xs flex items-center gap-2 text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeftIcon size={15} />
+          Back to Applications
+        </Link>
+      </DashboardHeader>
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto w-full max-w-3xl space-y-6">{children}</div>
+      </div>
+    </>
+  )
+}
+
+export function ApplicationDetails({ applicationId }: ApplicationDetailsProps) {
+  const {
+    data: details,
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+  } = useGetSellerApplicationQuery(applicationId)
   const [approveApplication, { isLoading: isApproving }] = useApproveSellerApplicationMutation()
   const [rejectApplication, { isLoading: isRejecting }] = useRejectSellerApplicationMutation()
-  
+
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const details = applicationDetails ?? application
+  if (isLoading) {
+    return (
+      <DetailsShell>
+        <div className="rounded-3xl border border-gray-100 bg-white p-8 text-sm text-gray-400">
+          Loading application...
+        </div>
+      </DetailsShell>
+    )
+  }
+
+  if (isError || !details) {
+    return (
+      <DetailsShell>
+        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-8 space-y-3">
+          <p className="text-sm font-bold text-rose-800">Application not found.</p>
+          <p className="text-xs text-rose-700">
+            No seller application matches <span className="font-mono">{applicationId}</span>. It may have been removed.
+          </p>
+          <button type="button" onClick={() => refetch()} className="text-xs font-bold text-rose-800 underline hover:text-rose-950">
+            Retry
+          </button>
+        </div>
+      </DetailsShell>
+    )
+  }
 
   const isPending = details.status.toUpperCase().includes("PENDING")
   const isApproved = details.status.toUpperCase().includes("APPROVED")
@@ -74,24 +127,13 @@ export function ApplicationDetails({ application, onClose }: ApplicationDetailsP
 
   return (
     <>
-      <div className="w-full lg:w-[420px] xl:w-[460px] bg-white border-l border-gray-100 flex flex-col h-full overflow-hidden shadow-xl z-20 transition-all duration-300">
-        {/* Top Header Bar */}
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Application Details</h3>
-            <p className="text-xs text-gray-400">UUID: {details.id}</p>
-          </div>
-          <button
-            onClick={onClose}
-            type="button"
-            className="size-9 rounded-xl border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <XIcon size={18} />
-          </button>
-        </div>
-        
-        {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <DetailsShell>
+        <p className="text-xs text-gray-400">
+          UUID: <span className="font-mono">{details.id}</span>
+        </p>
+
+        {/* Main detail card */}
+        <div className="rounded-3xl border border-gray-100 bg-white p-6 space-y-6 shadow-sm">
           {/* Action Success / Error Notifications */}
           {actionSuccess && (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800 flex items-center justify-between">
@@ -153,7 +195,7 @@ export function ApplicationDetails({ application, onClose }: ApplicationDetailsP
                 <span>Rejection Reason</span>
               </div>
               <p className="text-rose-700 leading-relaxed font-medium pl-6">
-                "{details.rejectionNote}"
+                &ldquo;{details.rejectionNote}&rdquo;
               </p>
             </div>
           )}
@@ -290,8 +332,8 @@ export function ApplicationDetails({ application, onClose }: ApplicationDetailsP
           </div>
         </div>
         
-        {/* Bottom Action Bar */}
-        <div className="p-6 border-t border-gray-100 bg-white space-y-2.5 shrink-0">
+        {/* Action Bar */}
+        <div className="rounded-3xl border border-gray-100 bg-white p-6 space-y-2.5 shadow-sm">
           <Button
             disabled={isApproving || isRejecting}
             onClick={handleApprove}
@@ -310,15 +352,15 @@ export function ApplicationDetails({ application, onClose }: ApplicationDetailsP
             {isRejecting ? "Rejecting..." : "Reject Application"}
           </Button>
 
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full border-gray-200 text-gray-600 rounded-xl h-11 font-semibold flex items-center justify-center gap-2"
+          <Link
+            href={BACK_HREF}
+            className="w-full border border-gray-200 text-gray-600 rounded-xl h-11 font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors"
           >
-            Close Panel
-          </Button>
+            <ArrowLeftIcon size={16} />
+            Back to Applications
+          </Link>
         </div>
-      </div>
+      </DetailsShell>
 
       {/* Rejection Modal Dialog */}
       <RejectionDialog
