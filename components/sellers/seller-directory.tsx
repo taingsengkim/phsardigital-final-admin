@@ -6,25 +6,28 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { StatsCard } from "@/components/dashboard/stats-card"
 import {
-  AlertCircleIcon,
-  AlertTriangleIcon,
-  BadgeCheckIcon,
-  BanIcon,
-  CheckCircle2Icon,
   ChevronDownIcon,
+  DownloadIcon,
   FilterIcon,
+  MapPinIcon,
+  MessageSquareTextIcon,
   MoreHorizontalIcon,
+  RefreshCwIcon,
   SearchIcon,
+  ShoppingBagIcon,
+  StarIcon,
   StoreIcon,
 } from "lucide-react"
 
 import type { Seller } from "@/lib/types/seller"
 
 export function SellerStats({ sellers, isLoading }: { sellers: Seller[]; isLoading?: boolean }) {
-  const verified = sellers.filter((seller) => seller.verification.toLowerCase().includes("verified"))
-  const pending = sellers.filter((seller) => seller.verification.toLowerCase().includes("pending"))
-  const suspended = sellers.filter((seller) => seller.status.toUpperCase() === "SUSPENDED")
-  const banned = sellers.filter((seller) => seller.status.toUpperCase() === "BANNED")
+  const rated = sellers.filter((seller) => seller.rating !== null && seller.rating > 0)
+  const averageRating = rated.length
+    ? rated.reduce((total, seller) => total + (seller.rating ?? 0), 0) / rated.length
+    : 0
+  const totalReviews = sellers.reduce((total, seller) => total + (seller.reviews ?? 0), 0)
+  const completedOrders = sellers.reduce((total, seller) => total + seller.completedOrders, 0)
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
@@ -37,55 +40,84 @@ export function SellerStats({ sellers, isLoading }: { sellers: Seller[]; isLoadi
         iconColor="text-indigo-600"
       />
       <StatsCard
-        title="Verified Sellers"
-        value={isLoading ? "..." : verified.length.toLocaleString()}
-        trend="Live from API"
-        icon={CheckCircle2Icon}
+        title="Rated Sellers"
+        value={isLoading ? "..." : rated.length.toLocaleString()}
+        trend="With customer ratings"
+        icon={StarIcon}
         iconBgColor="bg-blue-50"
         iconColor="text-blue-600"
       />
       <StatsCard
-        title="Pending Verification"
-        value={isLoading ? "..." : pending.length.toLocaleString()}
-        trend="Live from API"
-        icon={AlertCircleIcon}
+        title="Average Rating"
+        value={isLoading ? "..." : averageRating.toFixed(1)}
+        trend="Seller directory average"
+        icon={StarIcon}
         iconBgColor="bg-orange-50"
         iconColor="text-orange-600"
       />
       <StatsCard
-        title="Suspended Sellers"
-        value={isLoading ? "..." : suspended.length.toLocaleString()}
-        trend="Live from API"
-        trendType="down"
-        icon={AlertTriangleIcon}
-        iconBgColor="bg-rose-50"
-        iconColor="text-rose-500"
+        title="Customer Reviews"
+        value={isLoading ? "..." : totalReviews.toLocaleString()}
+        trend="Across listed sellers"
+        icon={MessageSquareTextIcon}
+        iconBgColor="bg-violet-50"
+        iconColor="text-violet-600"
       />
       <StatsCard
-        title="Banned Sellers"
-        value={isLoading ? "..." : banned.length.toLocaleString()}
-        trend="Live from API"
-        trendType="down"
-        icon={BanIcon}
-        iconBgColor="bg-red-50"
-        iconColor="text-red-500"
+        title="Completed Orders"
+        value={isLoading ? "..." : completedOrders.toLocaleString()}
+        trend="All-time seller orders"
+        icon={ShoppingBagIcon}
+        iconBgColor="bg-emerald-50"
+        iconColor="text-emerald-600"
       />
     </div>
   )
 }
 
-export function SellerFilters() {
+export function SellerFilters({
+  onExport,
+  onRefresh,
+  isLoading,
+  exportDisabled,
+}: {
+  onExport: () => void
+  onRefresh: () => void
+  isLoading?: boolean
+  exportDisabled?: boolean
+}) {
   return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-      <div className="relative w-full lg:max-w-130">
-        <SearchIcon className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-        <Input
-          placeholder="Search by seller name, store name or email..."
-          className="h-12 rounded-2xl border-none bg-gray-50 pl-11 shadow-none placeholder:text-gray-400"
-        />
+    <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full lg:max-w-130">
+          <SearchIcon className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            placeholder="Search by business name or location..."
+            className="h-11 rounded-xl border-none bg-gray-50 pl-11 shadow-none placeholder:text-gray-400"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={onExport}
+            disabled={exportDisabled}
+            className="h-10 flex-1 rounded-xl border-gray-200 px-3.5 text-xs font-semibold text-gray-600 hover:text-gray-900 sm:flex-none"
+          >
+            <DownloadIcon size={14} /> Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onRefresh}
+            className="h-10 flex-1 rounded-xl border-gray-200 px-3.5 text-xs font-semibold text-gray-600 hover:text-gray-900 sm:flex-none"
+          >
+            <RefreshCwIcon size={14} className={isLoading ? "animate-spin text-[#6338f6]" : ""} /> Refresh data
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
+      <div className="mt-4 flex flex-col gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">Filter sellers</span>
         <button className="flex h-11 items-center gap-2 rounded-xl bg-gray-50 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100">
           <span>All Verification</span>
           <ChevronDownIcon size={14} className="text-gray-400" />
@@ -107,33 +139,6 @@ export function SellerFilters() {
   )
 }
 
-function getVerificationBadge(verification: string) {
-  if (verification.toLowerCase().includes("verified")) {
-    return (
-      <Badge variant="success" className="gap-1.5 font-bold text-[10px]">
-        <BadgeCheckIcon className="size-3.5" />
-        {verification}
-      </Badge>
-    )
-  }
-
-  if (verification.toLowerCase().includes("pending")) {
-    return (
-      <Badge variant="warning" className="gap-1.5 font-bold text-[10px]">
-        <AlertCircleIcon className="size-3.5" />
-        {verification}
-      </Badge>
-    )
-  }
-
-  return (
-    <Badge variant="error" className="gap-1.5 font-bold text-[10px]">
-      <BanIcon className="size-3.5" />
-      {verification}
-    </Badge>
-  )
-}
-
 export function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoading?: boolean }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
@@ -145,12 +150,10 @@ export function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoadi
                 <input type="checkbox" className="size-4 rounded border-gray-300 text-[#6338f6] focus:ring-[#6338f6]" />
               </th>
               <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Seller / Store</th>
-              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Email / Phone</th>
-              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Verification</th>
-              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Plan</th>
-              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Listings</th>
+              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Location</th>
               <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Rating</th>
-              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Sales (30d)</th>
+              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Reviews</th>
+              <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Completed Orders</th>
               <th className="p-6 text-xs font-bold uppercase tracking-wider text-gray-400">Status</th>
               <th className="p-6 text-center text-xs font-bold uppercase tracking-wider text-gray-400">Actions</th>
             </tr>
@@ -158,7 +161,7 @@ export function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoadi
           <tbody className="divide-y divide-gray-50">
             {isLoading && sellers.length === 0 ? (
               <tr>
-                <td colSpan={10} className="p-6 text-sm text-gray-400">
+                <td colSpan={8} className="p-6 text-sm text-gray-400">
                   Loading sellers...
                 </td>
               </tr>
@@ -180,35 +183,28 @@ export function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoadi
                     </Avatar>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{seller.name}</p>
-                      <p className="text-[10px] text-gray-400">{seller.store}</p>
+                      <p className="max-w-44 truncate font-mono text-[10px] text-gray-400" title={seller.id}>{seller.id}</p>
                     </div>
                   </div>
                 </td>
                 <td className="p-6">
-                  <p className="text-sm text-gray-500">{seller.email}</p>
-                  <p className="text-xs text-gray-400">{seller.phone}</p>
+                  <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                    <MapPinIcon size={13} className="shrink-0 text-gray-400" />
+                    <span className="max-w-48 truncate" title={seller.location}>{seller.location}</span>
+                  </div>
                 </td>
-                <td className="p-6">
-                  {getVerificationBadge(seller.verification)}
-                </td>
-                <td className="p-6">
-                  <Badge variant="outline" className="rounded-full border-0 bg-violet-50 px-3 py-1 text-[10px] font-bold text-violet-600">
-                    {seller.plan}
-                  </Badge>
-                </td>
-                <td className="p-6 text-sm font-medium text-gray-900">{seller.listings}</td>
                 <td className="p-6">
                   {seller.rating ? (
                     <div className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
-                      <span className="text-amber-400">★</span>
+                      <StarIcon size={14} className="fill-amber-400 text-amber-400" />
                       <span>{seller.rating.toFixed(1)}</span>
-                      <span className="text-gray-400">({seller.reviews})</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-gray-400">-- (0)</span>
+                    <span className="text-sm text-gray-400">Not rated</span>
                   )}
                 </td>
-                <td className="p-6 text-sm font-semibold text-gray-900">{seller.sales}</td>
+                <td className="p-6 text-sm font-medium text-gray-700">{(seller.reviews ?? 0).toLocaleString()}</td>
+                <td className="p-6 text-sm font-semibold text-gray-900">{seller.completedOrders.toLocaleString()}</td>
                 <td className="p-6">
                   {seller.status.toUpperCase() === "ACTIVE" ? (
                     <Badge variant="success" className="text-[10px] font-bold">ACTIVE</Badge>
@@ -226,7 +222,7 @@ export function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoadi
               </tr>
             )) : (
               <tr>
-                <td colSpan={10} className="p-6 text-sm text-gray-400">
+                <td colSpan={8} className="p-6 text-sm text-gray-400">
                   No sellers found.
                 </td>
               </tr>
@@ -235,22 +231,10 @@ export function SellerTable({ sellers, isLoading }: { sellers: Seller[]; isLoadi
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-gray-50 p-6">
+      <div className="border-t border-gray-50 p-6">
         <p className="text-sm text-gray-400">
-          Showing <span className="font-medium text-gray-900">1 to {Math.min(10, sellers.length || 10)}</span> of{" "}
-          <span className="font-medium text-gray-900">{sellers.length.toLocaleString()}</span> sellers
+          Showing <span className="font-medium text-gray-900">{sellers.length.toLocaleString()}</span> sellers from the live seller directory
         </p>
-
-        <div className="flex items-center gap-2">
-          <button className="flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">&lt;</button>
-          <button className="flex size-8 items-center justify-center rounded-lg bg-[#6338f6] text-sm font-bold text-white">1</button>
-          <button className="flex size-8 items-center justify-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">2</button>
-          <button className="flex size-8 items-center justify-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">3</button>
-          <button className="flex size-8 items-center justify-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">4</button>
-          <span className="px-1 text-gray-400">...</span>
-          <button className="flex size-8 items-center justify-center rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100">421</button>
-          <button className="flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">&gt;</button>
-        </div>
       </div>
     </div>
   )

@@ -18,7 +18,6 @@ import {
   MapPinIcon,
   RefreshCwIcon,
   ShieldAlertIcon,
-  SparklesIcon,
   XCircleIcon,
   XIcon,
   ZoomInIcon,
@@ -53,15 +52,7 @@ function DetailsShell({ children }: { children: React.ReactNode }) {
       <DashboardHeader
         title="Seller application"
         description="Verify the business profile and supporting documents before making a decision."
-      >
-        <Link
-          href={BACK_HREF}
-          className="hidden h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 sm:flex"
-        >
-          <ArrowLeftIcon size={15} />
-          Applications
-        </Link>
-      </DashboardHeader>
+      />
 
       <main className="app-scrollbar flex-1 overflow-y-auto bg-[#f7f7fb] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
         <div className="mx-auto w-full max-w-7xl">{children}</div>

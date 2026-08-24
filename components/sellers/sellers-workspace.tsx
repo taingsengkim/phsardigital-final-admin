@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 
 import { DashboardHeader } from "@/components/dashboard/header"
 import { StatsCard } from "@/components/dashboard/stats-card"
-import { Button } from "@/components/ui/button"
 import { ApplicationTable } from "@/components/seller-applications/application-table"
 import { SellerFilters, SellerStats, SellerTable } from "@/components/sellers/seller-directory"
 import { cn } from "@/lib/utils"
@@ -12,8 +11,6 @@ import {
   CheckCircle2Icon,
   ClipboardListIcon,
   ClockIcon,
-  DownloadIcon,
-  RefreshCwIcon,
   XCircleIcon,
 } from "lucide-react"
 
@@ -80,22 +77,23 @@ export function SellersWorkspace() {
     router.replace(`/dashboard/sellers${query ? `?${query}` : ""}`, { scroll: false })
   }
 
-  const isLoading = tab === "applications" ? applicationsLoading : sellersLoading
-  const refetch = tab === "applications" ? refetchApplications : refetchSellers
-
   function handleExport() {
     if (tab === "applications") {
       if (applications.length === 0) return
       downloadCsv(
         "seller-applications",
-        ["ID", "Business Name", "Applicant Name", "Email", "Phone", "Status", "Applied On"],
+        ["ID", "Applicant ID", "Business Name", "Business Type", "Address", "City", "Province", "Status", "Documents", "Missing Documents", "Applied On"],
         applications.map((app) => [
           app.id,
+          app.applicantId,
           csvCell(app.businessName),
-          csvCell(app.name),
-          app.email,
-          app.phone,
+          csvCell(app.businessType),
+          csvCell(app.address),
+          csvCell(app.city),
+          csvCell(app.province),
           app.status,
+          String(app.documents.length),
+          csvCell(app.missingDocuments.join(", ")),
           app.appliedOn,
         ]),
       )
@@ -105,16 +103,14 @@ export function SellersWorkspace() {
     if (sellers.length === 0) return
     downloadCsv(
       "sellers",
-      ["ID", "Name", "Store", "Email", "Phone", "Verification", "Plan", "Listings", "Status"],
+      ["Seller ID", "Business Name", "Location", "Average Rating", "Reviews", "Completed Orders", "Status"],
       sellers.map((seller) => [
         seller.id,
         csvCell(seller.name),
-        csvCell(seller.store),
-        seller.email,
-        seller.phone,
-        seller.verification,
-        seller.plan,
-        String(seller.listings),
+        csvCell(seller.location),
+        seller.rating?.toFixed(1) ?? "",
+        String(seller.reviews ?? 0),
+        String(seller.completedOrders),
         seller.status,
       ]),
     )
@@ -132,26 +128,7 @@ export function SellersWorkspace() {
       <DashboardHeader
         title="Sellers"
         description="Review seller applications and manage active sellers."
-      >
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={exportDisabled}
-            className="rounded-xl border-gray-200 h-10 px-4 font-semibold text-xs flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50"
-          >
-            <DownloadIcon size={15} />
-            Export CSV
-          </Button>
-          <Button
-            onClick={() => refetch()}
-            className="rounded-xl bg-[#6338f6] hover:bg-[#532edb] h-10 px-4 font-semibold text-xs flex items-center gap-2 shadow-sm shadow-purple-500/20"
-          >
-            <RefreshCwIcon size={15} className={isLoading ? "animate-spin" : ""} />
-            Refresh Data
-          </Button>
-        </div>
-      </DashboardHeader>
+      />
 
       <div className="border-b border-gray-100 bg-white px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-1" role="tablist" aria-label="Seller views">
@@ -242,6 +219,8 @@ export function SellersWorkspace() {
               selectedApplicationId={null}
               onSelectApplication={(app) => router.push(`/dashboard/sellers/applications/${app.id}`)}
               onRefresh={refetchApplications}
+              onExport={handleExport}
+              exportDisabled={exportDisabled}
             />
           </div>
         </div>
@@ -259,7 +238,12 @@ export function SellersWorkspace() {
           <SellerStats sellers={sellers} isLoading={sellersLoading} />
 
           <div className="space-y-6">
-            <SellerFilters />
+            <SellerFilters
+              onExport={handleExport}
+              onRefresh={refetchSellers}
+              isLoading={sellersLoading}
+              exportDisabled={exportDisabled}
+            />
             <SellerTable sellers={sellers} isLoading={sellersLoading} />
           </div>
         </div>

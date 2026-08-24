@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { SearchIcon, FilterIcon, CheckCircle2Icon, XCircleIcon, ClockIcon, MapPinIcon, RefreshCwIcon } from "lucide-react"
+import { SearchIcon, CheckCircle2Icon, XCircleIcon, ClockIcon, DownloadIcon, MapPinIcon, RefreshCwIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import type { SellerApplication } from "@/lib/types/seller-application"
@@ -13,6 +13,8 @@ interface ApplicationTableProps {
   onSelectApplication: (application: SellerApplication) => void
   isLoading?: boolean
   onRefresh?: () => void
+  onExport?: () => void
+  exportDisabled?: boolean
 }
 
 type StatusTab = "ALL" | "PENDING" | "APPROVED" | "REJECTED"
@@ -23,6 +25,8 @@ export function ApplicationTable({
   onSelectApplication,
   isLoading,
   onRefresh,
+  onExport,
+  exportDisabled,
 }: ApplicationTableProps) {
   const [activeTab, setActiveTab] = useState<StatusTab>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
@@ -74,10 +78,10 @@ export function ApplicationTable({
 
   return (
     <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-xs flex flex-col">
-      {/* Top Header Controls: Search & Tabs */}
-      <div className="p-6 border-b border-gray-100 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-white">
+      {/* Table controls stay contained and only share a row on very wide screens. */}
+      <div className="flex flex-col gap-4 border-b border-gray-100 bg-white p-4 sm:p-6">
         {/* Status Filter Tabs */}
-        <div className="flex items-center p-1 bg-gray-100/80 rounded-2xl overflow-x-auto shrink-0 scrollbar-none">
+        <div className="scrollbar-none flex max-w-full shrink-0 items-center overflow-x-auto rounded-2xl bg-gray-100/80 p-1">
           <button
             type="button"
             onClick={() => handleTabChange("ALL")}
@@ -127,9 +131,9 @@ export function ApplicationTable({
           </button>
         </div>
 
-        {/* Search & Refresh Bar */}
-        <div className="flex items-center gap-3 w-full lg:w-auto">
-          <div className="relative flex-1 lg:w-72">
+        {/* Search & list actions */}
+        <div className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:items-center 2xl:max-w-2xl">
+          <div className="relative min-w-0 flex-1">
             <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
             <Input 
               value={searchQuery}
@@ -142,17 +146,32 @@ export function ApplicationTable({
             />
           </div>
 
-          {onRefresh && (
-            <Button
-              variant="outline"
-              onClick={onRefresh}
-              className="rounded-xl border-gray-200 h-10 px-3.5 font-semibold text-xs flex items-center gap-1.5 text-gray-600 hover:text-gray-900"
-              title="Refresh List"
-            >
-              <RefreshCwIcon size={14} className={isLoading ? "animate-spin text-[#6338f6]" : ""} />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-          )}
+          <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center">
+            {onExport && (
+              <Button
+                variant="outline"
+                onClick={onExport}
+                disabled={exportDisabled}
+                className="h-10 rounded-xl border-gray-200 px-3.5 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                title="Export the current application dataset"
+              >
+                <DownloadIcon size={14} />
+                Export CSV
+              </Button>
+            )}
+
+            {onRefresh && (
+              <Button
+                variant="outline"
+                onClick={onRefresh}
+                className="flex h-10 items-center gap-1.5 rounded-xl border-gray-200 px-3.5 text-xs font-semibold text-gray-600 hover:text-gray-900"
+                title="Refresh applications"
+              >
+                <RefreshCwIcon size={14} className={isLoading ? "animate-spin text-[#6338f6]" : ""} />
+                Refresh
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
