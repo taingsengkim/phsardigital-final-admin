@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { showToast } from "@/components/ui/toast-popup"
 import type { SubscriptionPlan } from "@/lib/types/subscription"
 import {
   useCreateSubscriptionPlanMutation,
@@ -93,10 +94,19 @@ export function EditPlanModal({ plan, open, onOpenChange }: EditPlanModalProps) 
         }).unwrap()
       }
 
+      showToast({
+        type: "success",
+        title: isEditing ? "Plan Updated" : "Plan Created",
+        message: isEditing ? `Subscription plan "${displayName}" updated.` : `New plan "${displayName}" created successfully.`,
+      })
       onOpenChange(false)
     } catch (err: unknown) {
       console.error("Save plan error:", err)
-      alert(err instanceof Error ? err.message : "Failed to save subscription plan.")
+      showToast({
+        type: "error",
+        title: "Failed to Save Plan",
+        message: err instanceof Error ? err.message : "Failed to save subscription plan.",
+      })
     }
   }
 

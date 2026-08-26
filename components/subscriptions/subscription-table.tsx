@@ -39,6 +39,9 @@ function statusVariant(status: string) {
   return "secondary" as const
 }
 
+import { showToast } from "@/components/ui/toast-popup"
+import { ConfirmModal } from "@/components/ui/confirm-modal"
+
 export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const [status, setStatus] = useState("")
   const [search, setSearch] = useState("")
@@ -46,14 +49,16 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const [activeMenuSellerId, setActiveMenuSellerId] = useState<string | null>(null)
   const [selectedSubForGrant, setSelectedSubForGrant] = useState<SellerSubscription | null>(null)
   const [isGrantOpen, setIsGrantOpen] = useState(false)
+  const [cancelSellerId, setCancelSellerId] = useState<string | null>(null)
+  const [isConfirmCancelOpen, setIsConfirmCancelOpen] = useState(false)
 
-  const { data, isLoading, isFetching, refetch } = useGetSellerSubscriptionsQuery({
+  const { data, isLoading, isFetching } = useGetSellerSubscriptionsQuery({
     status: status || undefined,
     pageNumber,
     pageSize: 10,
   })
 
-  const [cancelSubscription] = useCancelSellerSubscriptionMutation()
+  const [cancelSubscription, { isLoading: isCancelling }] = useCancelSellerSubscriptionMutation()
 
   const subscriptions = data?.content ?? []
   const totalElements = data?.page.totalElements ?? 0
@@ -79,13 +84,27 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
     setActiveMenuSellerId(null)
   }
 
-  const handleCancel = async (sellerId: string) => {
-    if (!confirm(`Are you sure you want to cancel the subscription for seller ${sellerId}?`)) return
+  const promptCancel = (sellerId: string) => {
+    setCancelSellerId(sellerId)
+    setIsConfirmCancelOpen(true)
+    setActiveMenuSellerId(null)
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!cancelSellerId) return
     try {
-      await cancelSubscription(sellerId).unwrap()
-      setActiveMenuSellerId(null)
+      await cancelSubscription(cancelSellerId).unwrap()
+      showToast({
+        type: "success",
+        title: "Subscription Cancelled",
+        message: `Subscription for seller ${cancelSellerId} was successfully cancelled.`,
+      })
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to cancel subscription.")
+      showToast({
+        type: "error",
+        title: "Cancellation Failed",
+        message: err instanceof Error ? err.message : "Failed to cancel subscription.",
+      })
     }
   }
 
@@ -207,7 +226,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
                         </button>
                         {sub.status === "ACTIVE" && (
                           <button
-                            onClick={() => handleCancel(sub.sellerId)}
+                            onClick={() => promptCancel(sub.sellerId)}
                             className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-gray-50"
                           >
                             <BanIcon size={14} />
@@ -262,6 +281,18 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
         plans={plans}
         open={isGrantOpen}
         onOpenChange={setIsGrantOpen}
+      />
+
+      {/* Popup Confirmation for Cancelling Subscription */}
+      <ConfirmModal
+        open={isConfirmCancelOpen}
+        onOpenChange={setIsConfirmCancelOpen}
+        title="Cancel Seller Subscription"
+        description={`Are you sure you want to cancel the subscription for seller "${cancelSellerId}"? This action takes effect immediately.`}
+        confirmText="Cancel Subscription"
+        variant="danger"
+        isLoading={isCancelling}
+        onConfirm={handleConfirmCancel}
       />
     </div>
   )

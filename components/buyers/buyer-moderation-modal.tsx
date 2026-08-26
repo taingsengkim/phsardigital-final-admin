@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { AlertCircleIcon, ShieldAlertIcon } from "lucide-react"
+import { showToast } from "@/components/ui/toast-popup"
 import type { Buyer } from "@/lib/types/buyer"
 import {
   useSuspendBuyerMutation,
@@ -109,10 +110,20 @@ export function BuyerModerationModal({
       } else if (actionType === "restore") {
         await restoreBuyer(buyer.id).unwrap()
       }
+
+      showToast({
+        type: "success",
+        title: `Buyer ${actionType === "restore" ? "Restored" : actionType === "ban" ? "Banned" : "Suspended"}`,
+        message: `Account for buyer "${buyer.fullName}" was successfully ${actionType}ed.`,
+      })
       onOpenChange(false)
     } catch (err: unknown) {
       console.error("Buyer moderation error:", err)
-      alert(err instanceof Error ? err.message : "Failed to perform moderation action.")
+      showToast({
+        type: "error",
+        title: "Action Failed",
+        message: err instanceof Error ? err.message : "Failed to perform moderation action.",
+      })
     }
   }
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { showToast } from "@/components/ui/toast-popup"
 import type { SubscriptionPlan, SellerSubscription } from "@/lib/types/subscription"
 import { useGrantSellerSubscriptionMutation } from "@/lib/redux/service/subscriptionApi"
 
@@ -47,7 +48,11 @@ export function GrantSubscriptionModal({
     e.preventDefault()
 
     if (!sellerId.trim()) {
-      alert("Please enter a Seller ID.")
+      showToast({
+        type: "warning",
+        title: "Missing Seller ID",
+        message: "Please enter a valid Seller ID.",
+      })
       return
     }
 
@@ -61,10 +66,19 @@ export function GrantSubscriptionModal({
         },
       }).unwrap()
 
+      showToast({
+        type: "success",
+        title: "Subscription Updated",
+        message: `Subscription successfully granted to seller ${sellerId.trim()}.`,
+      })
       onOpenChange(false)
     } catch (err: unknown) {
       console.error("Grant subscription error:", err)
-      alert(err instanceof Error ? err.message : "Failed to update seller subscription.")
+      showToast({
+        type: "error",
+        title: "Subscription Error",
+        message: err instanceof Error ? err.message : "Failed to update seller subscription.",
+      })
     }
   }
 

@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ToastContainer } from "@/components/ui/toast-popup";
+
 export default function RootLayout({
                                      children,
                                    }: Readonly<{
@@ -37,7 +39,10 @@ export default function RootLayout({
       >
       <body className="h-full overflow-hidden flex flex-col">
       <StoreProvider>
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          {children}
+          <ToastContainer />
+        </TooltipProvider>
       </StoreProvider>
       </body>
       </html>
