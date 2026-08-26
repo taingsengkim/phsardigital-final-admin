@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button"
 
 interface CategoryDetailsProps {
   category: CategoryRecord | null
+  parentCategory?: CategoryRecord | null
   onStartEdit?: (category: CategoryRecord) => void
   onStartDelete?: (category: CategoryRecord) => void
 }
 
-export function CategoryDetails({ category, onStartEdit, onStartDelete }: CategoryDetailsProps) {
+export function CategoryDetails({ category, parentCategory, onStartEdit, onStartDelete }: CategoryDetailsProps) {
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center shadow-sm">
@@ -45,8 +46,13 @@ export function CategoryDetails({ category, onStartEdit, onStartDelete }: Catego
           )}
         </div>
 
-        <div className="mx-auto mb-4 flex size-20 items-center justify-center rounded-2xl bg-purple-50">
-          <FolderIcon size={40} className="text-[#6338f6]" />
+        <div className="mx-auto mb-4 flex size-20 items-center justify-center overflow-hidden rounded-2xl bg-purple-50 p-2">
+          {category?.iconUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={category.iconUrl} alt={category.name} className="size-full object-contain" />
+          ) : (
+            <FolderIcon size={40} className="text-[#6338f6]" />
+          )}
         </div>
 
         <h4 className="mb-1 text-xl font-bold text-gray-900">
@@ -65,6 +71,20 @@ export function CategoryDetails({ category, onStartEdit, onStartDelete }: Catego
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">Total Listings</span>
                 <span className="font-bold text-gray-900">{category.listingsCount.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Parent</span>
+                <span className="font-bold text-gray-900">
+                  {parentCategory?.name ?? (category.parentId ? "Unknown" : "Top level")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Level</span>
+                <span className="font-bold text-gray-900">{category.level}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Sort Order</span>
+                <span className="font-bold text-gray-900">{category.sortOrder}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-500">Status</span>

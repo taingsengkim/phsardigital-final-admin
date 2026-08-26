@@ -1,4 +1,4 @@
-git aimport { betterFetch } from "@better-fetch/fetch";
+import { betterFetch } from "@better-fetch/fetch";
 import type { auth } from "@/lib/auth";
 import { NextResponse, type NextRequest } from "next/server";
 

@@ -35,13 +35,20 @@ const revenueData = [
   { name: 'May 18', revenue: 8842.50 },
 ];
 
-const topCategoriesData = [
-  { name: 'Electronics', value: 35, color: '#6338f6' },
-  { name: 'Property', value: 15, color: '#ff70d2' },
-  { name: 'Services', value: 8, color: '#5ec2ff' },
-  { name: 'Vehicles', value: 25, color: '#5356ff' },
-  { name: 'Fashion', value: 12, color: '#ffb340' },
-  { name: 'Others', value: 5, color: '#cbd5e1' },
+export interface CategoryChartItem {
+  name: string
+  value: number
+  count?: number
+  color: string
+}
+
+const topCategoriesData: CategoryChartItem[] = [
+  { name: 'Electronics', value: 35, count: 5894, color: '#6338f6' },
+  { name: 'Property', value: 15, count: 2525, color: '#ff70d2' },
+  { name: 'Services', value: 8, count: 1350, color: '#5ec2ff' },
+  { name: 'Vehicles', value: 25, count: 4210, color: '#5356ff' },
+  { name: 'Fashion', value: 12, count: 2020, color: '#ffb340' },
+  { name: 'Others', value: 5, count: 843, color: '#cbd5e1' },
 ];
 
 export function UserGrowthChart() {
@@ -110,13 +117,23 @@ export function RevenueOverviewChart() {
   )
 }
 
-export function TopCategoriesChart() {
+
+export function TopCategoriesChart({ 
+  data = topCategoriesData, 
+  totalListings 
+}: { 
+  data?: CategoryChartItem[]
+  totalListings?: number 
+}) {
+  const chartData = data.length > 0 ? data : topCategoriesData;
+  const displayTotal = totalListings ?? chartData.reduce((acc, item) => acc + (item.count ?? item.value), 0);
+
   return (
     <div className="h-[200px] w-full relative">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={topCategoriesData}
+            data={chartData}
             cx="50%"
             cy="50%"
             innerRadius={60}
@@ -124,14 +141,14 @@ export function TopCategoriesChart() {
             paddingAngle={5}
             dataKey="value"
           >
-            {topCategoriesData.map((entry, index) => (
+            {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-xl font-bold">16,842</span>
+        <span className="text-xl font-bold">{displayTotal.toLocaleString()}</span>
         <span className="text-[10px] text-gray-400">Total Listings</span>
       </div>
     </div>

@@ -1,13 +1,32 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query"
 import type {
   CategoryRecord,
   CategoryStatus,
   CreateCategoryInput,
+  UpdateCategoryInput,
 } from "@/lib/types/category"
 
-export type { CategoryRecord, CategoryStatus, CreateCategoryInput } from "@/lib/types/category"
+export type {
+  CategoryRecord,
+  CategoryStatus,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+} from "@/lib/types/category"
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API ?? "/api").replace(/\/$/, "")
+
+/** Upstream caps pageSize at 100 on both /categories and /listings. */
+const MAX_PAGE_SIZE = 100
+/** Stops a bad totalPages from turning a page load into an unbounded sweep. */
+const MAX_PAGES = 25
+
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+
+export interface FileUploadResult {
+  objectName?: string
+  uri?: string
+}
 
 function toText(value: unknown, fallback = "") {
   if (typeof value === "string") {
@@ -49,6 +68,23 @@ function toStatus(value: unknown): CategoryStatus {
   return status || "active"
 }
 
+/**
+ * The upload endpoint only returns objectName/uri, but CategoryRequest wants
+ * iconFileId as a UUID. Stored object names carry the file UUID as a prefix
+ * (uuid-original-name.ext), so read it back out of whichever field we get.
+ */
+export function extractFileId(response: FileUploadResult | null | undefined) {
+  for (const candidate of [response?.objectName, response?.uri]) {
+    const match = typeof candidate === "string" ? candidate.match(UUID_PATTERN) : null
+
+    if (match) {
+      return match[0]
+    }
+  }
+
+  return undefined
+}
+
 function getCategoryId(value: Record<string, unknown>, index: number) {
   return (
     toText(value.uuid) ||
@@ -61,11 +97,14 @@ function getCategoryId(value: Record<string, unknown>, index: number) {
 }
 
 function getParentId(value: Record<string, unknown>) {
+  const parent = value.parent as { uuid?: unknown; id?: unknown } | undefined
+
   return (
+    toText(value.parentUuid) ||
     toText(value.parentId) ||
     toText(value.parent_id) ||
-    toText(value.parentUuid) ||
-    toText((value.parent as { id?: unknown } | undefined)?.id) ||
+    toText(parent?.uuid) ||
+    toText(parent?.id) ||
     toText(value.parentCategoryId) ||
     null
   )
@@ -101,8 +140,11 @@ function normalizeCategory(value: unknown, index = 0): CategoryRecord {
     status: toStatus(record.status ?? record.state ?? record.isActive),
     listingsCount: getListingsCount(record),
     parentId: getParentId(record),
+    level: toNumber(record.level) || 1,
+    sortOrder: toNumber(record.sortOrder ?? record.sort_order),
     createdAt: toText(record.createdAt) || toText(record.created_at) || null,
-    updatedAt: toText(record.updatedAt) || toText(record.updated_at) || null,
+    updatedAt:
+      toText(record.updatedAt) || toText(record.lastModifiedAt) || toText(record.updated_at) || null,
     iconName: getIconName(record),
     iconUrl: toText(record.iconUrl) || toText(record.icon_url) || toText(record.icon) || null,
     iconFileId: toText(record.iconFileId) || toText(record.icon_file_id) || null,
@@ -110,13 +152,14 @@ function normalizeCategory(value: unknown, index = 0): CategoryRecord {
   }
 }
 
-function normalizeCategoryList(response: unknown): CategoryRecord[] {
+function extractContent(response: unknown): unknown[] {
   if (Array.isArray(response)) {
-    return response.map((item, index) => normalizeCategory(item, index))
+    return response
   }
 
   const record = (response ?? {}) as Record<string, unknown>
-  const list =
+
+  return (
     (Array.isArray(record.content) && record.content) ||
     (Array.isArray(record.data) && record.data) ||
     (Array.isArray(record.categories) && record.categories) ||
@@ -124,8 +167,104 @@ function normalizeCategoryList(response: unknown): CategoryRecord[] {
     (Array.isArray(record.results) && record.results) ||
     (Array.isArray(record.payload) && record.payload) ||
     []
+  )
+}
 
-  return list.map((item, index) => normalizeCategory(item, index))
+function getTotalPages(response: unknown) {
+  const record = (response ?? {}) as Record<string, unknown>
+  const page = (record.page ?? {}) as Record<string, unknown>
+  const totalPages = toNumber(page.totalPages ?? record.totalPages)
+
+  return totalPages > 0 ? totalPages : 1
+}
+
+function normalizeCategoryList(response: unknown): CategoryRecord[] {
+  return extractContent(response).map((item, index) => normalizeCategory(item, index))
+}
+
+type AppBaseQuery = BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>
+type FetchWithBQ = (arg: string | FetchArgs) => ReturnType<AppBaseQuery>
+
+/**
+ * Both /categories and /listings are paged and default to a page size well
+ * below the number of rows an admin needs to see, so walk every page.
+ */
+async function fetchAllPages(fetchWithBQ: FetchWithBQ, path: string) {
+  const items: unknown[] = []
+  let totalPages = 1
+
+  for (let pageNumber = 0; pageNumber < totalPages && pageNumber < MAX_PAGES; pageNumber += 1) {
+    const separator = path.includes("?") ? "&" : "?"
+    const result = await fetchWithBQ(
+      `${path}${separator}pageNumber=${pageNumber}&pageSize=${MAX_PAGE_SIZE}`
+    )
+
+    if (result.error) {
+      return { items, error: result.error as FetchBaseQueryError }
+    }
+
+    items.push(...extractContent(result.data))
+    totalPages = getTotalPages(result.data)
+  }
+
+  return { items, error: undefined }
+}
+
+/**
+ * Categories carry no listing count of their own, so tally the listings by the
+ * category slug each one reports. Best effort: a listings outage leaves the
+ * counts at zero rather than breaking the category page.
+ */
+async function fetchListingCountsBySlug(fetchWithBQ: FetchWithBQ) {
+  const counts: Record<string, number> = {}
+  const { items, error } = await fetchAllPages(fetchWithBQ, "/listings")
+
+  if (error) {
+    return counts
+  }
+
+  for (const item of items) {
+    const category = ((item ?? {}) as Record<string, unknown>).category as
+      | Record<string, unknown>
+      | undefined
+    const slug = toText(category?.slug)
+
+    if (!slug) {
+      continue
+    }
+
+    counts[slug] = (counts[slug] ?? 0) + 1
+  }
+
+  return counts
+}
+
+const CREATE_FIELDS = [
+  "name",
+  "slug",
+  "iconFileId",
+  "description",
+  "sortOrder",
+  "isActive",
+  "parentUuid",
+] as const
+
+const UPDATE_FIELDS = [...CREATE_FIELDS, "moveToRoot"] as const
+
+/**
+ * Send only what the upstream request schema declares, and drop undefined
+ * values so a PATCH never reads as "clear this field".
+ */
+function buildPayload(input: Record<string, unknown>, fields: readonly string[]) {
+  const payload: Record<string, unknown> = {}
+
+  for (const field of fields) {
+    if (input[field] !== undefined) {
+      payload[field] = input[field]
+    }
+  }
+
+  return payload
 }
 
 export const categoriesApi = createApi({
@@ -141,8 +280,26 @@ export const categoriesApi = createApi({
   tagTypes: ["Categories"],
   endpoints: (builder) => ({
     getCategories: builder.query<CategoryRecord[], void>({
-      query: () => "/categories",
-      transformResponse: (response: unknown) => normalizeCategoryList(response),
+      queryFn: async (_arg, _api, _extraOptions, fetchWithBQ) => {
+        const { items, error } = await fetchAllPages(fetchWithBQ, "/categories")
+
+        if (error) {
+          return { error }
+        }
+
+        const counts = await fetchListingCountsBySlug(fetchWithBQ)
+
+        return {
+          data: items.map((item, index) => {
+            const category = normalizeCategory(item, index)
+
+            return {
+              ...category,
+              listingsCount: category.listingsCount || counts[category.slug] || 0,
+            }
+          }),
+        }
+      },
       providesTags: (result) =>
         result?.length
           ? [
@@ -155,35 +312,38 @@ export const categoriesApi = createApi({
       query: (body) => ({
         url: "/categories",
         method: "POST",
-        body,
+        body: buildPayload(body as unknown as Record<string, unknown>, CREATE_FIELDS),
       }),
-      transformResponse: (response: unknown) => {
-        const normalized = normalizeCategoryList(response)
-
-        return normalized[0] ?? normalizeCategory(response)
-      },
+      transformResponse: (response: unknown) => normalizeCategory(response),
       invalidatesTags: [{ type: "Categories", id: "LIST" }],
     }),
-    updateCategory: builder.mutation<CategoryRecord, { id: string; data: Partial<CreateCategoryInput> }>({
+    updateCategory: builder.mutation<CategoryRecord, { id: string; data: UpdateCategoryInput }>({
       query: ({ id, data }) => ({
-        url: `/categories/${id}`,
+        url: `/categories/${encodeURIComponent(id)}`,
         method: "PATCH",
-        body: data,
+        body: buildPayload(data as unknown as Record<string, unknown>, UPDATE_FIELDS),
       }),
-      transformResponse: (response: unknown) => {
-        const normalized = normalizeCategoryList(response)
-        return normalized[0] ?? normalizeCategory(response)
-      },
+      transformResponse: (response: unknown) => normalizeCategory(response),
       invalidatesTags: [{ type: "Categories", id: "LIST" }],
     }),
-    deleteCategory: builder.mutation<{ success: boolean; id: string }, string>({
-      query: (id) => ({
-        url: `/categories/${id}`,
+    // Upstream soft-deletes by slug, not by uuid.
+    deleteCategory: builder.mutation<{ success: boolean; slug: string }, string>({
+      query: (slug) => ({
+        url: `/categories/${encodeURIComponent(slug)}`,
         method: "DELETE",
       }),
+      transformResponse: (_response: unknown, _meta, slug) => ({ success: true, slug }),
       invalidatesTags: [{ type: "Categories", id: "LIST" }],
     }),
-    uploadCategoryIcon: builder.mutation<{ objectName?: string; uri?: string; id?: string; uuid?: string }, FormData>({
+    removeCategoryIcon: builder.mutation<CategoryRecord, string>({
+      query: (uuid) => ({
+        url: `/categories/${encodeURIComponent(uuid)}/icon`,
+        method: "DELETE",
+      }),
+      transformResponse: (response: unknown) => normalizeCategory(response),
+      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+    }),
+    uploadCategoryIcon: builder.mutation<FileUploadResult, FormData>({
       query: (formData) => ({
         url: "/files/upload",
         method: "POST",
@@ -193,10 +353,13 @@ export const categoriesApi = createApi({
   }),
 })
 
-export const { 
-  useGetCategoriesQuery, 
+export { normalizeCategory, normalizeCategoryList }
+
+export const {
+  useGetCategoriesQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
+  useRemoveCategoryIconMutation,
   useUploadCategoryIconMutation,
 } = categoriesApi

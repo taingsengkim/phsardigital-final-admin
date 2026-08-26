@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const payload = await request.json();
     const authHeaders = await getAuthHeader(request);
 
-    const upstreamRes = await fetch(`${BASE_URL}/categories/${id}`, {
+    const upstreamRes = await fetch(`${BASE_URL}/categories/${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id } = await params;
     const authHeaders = await getAuthHeader(request);
 
-    const upstreamRes = await fetch(`${BASE_URL}/categories/${id}`, {
+    const upstreamRes = await fetch(`${BASE_URL}/categories/${encodeURIComponent(id)}`, {
       method: "DELETE",
       headers: {
         Accept: "application/json",

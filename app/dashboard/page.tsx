@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   SidebarInset,
@@ -26,10 +27,59 @@ import {
   ChevronDownIcon
 } from "lucide-react"
 import { useGetAdminDashboardSummaryQuery } from "@/lib/redux/service/dashboardApi"
+import { useGetCategoriesQuery } from "@/lib/redux/service/categoryApi"
+import { useGetSellerApplicationsQuery } from "@/lib/redux/service/sellerApplicationApi"
+
+const categoryColors = ['#6338f6', '#5356ff', '#ff70d2', '#ffb340', '#5ec2ff', '#cbd5e1']
+
+const defaultCategories = [
+  { name: 'Electronics', count: 5894, pct: 35, color: '#6338f6' },
+  { name: 'Vehicles', count: 4210, pct: 25, color: '#5356ff' },
+  { name: 'Property', count: 2525, pct: 15, color: '#ff70d2' },
+  { name: 'Fashion', count: 2020, pct: 12, color: '#ffb340' },
+  { name: 'Services', count: 1350, pct: 8, color: '#5ec2ff' },
+  { name: 'Others', count: 843, pct: 5, color: '#cbd5e1' },
+]
 
 export default function Page() {
   const { data: summary, isLoading, isError, refetch } = useGetAdminDashboardSummaryQuery()
+  const { data: categories = [] } = useGetCategoriesQuery()
+  const { data: applications = [] } = useGetSellerApplicationsQuery({ page: 0, size: 50 })
+
   const value = (amount?: number) => isLoading ? "..." : (amount ?? 0).toLocaleString()
+
+  // Calculate pending documents from applications
+  const pendingDocsCount = applications.filter(
+    (app) => app.documents && app.documents.length > 0 && app.status.includes("PENDING")
+  ).length
+
+  // Calculate top categories data
+  const totalCategoryListings = categories.reduce((sum, c) => sum + (c.listingsCount || 0), 0)
+  
+  const formattedCategoryItems = categories.length > 0
+    ? categories.slice(0, 6).map((cat, idx) => {
+        const count = cat.listingsCount || 0
+        const pct = totalCategoryListings > 0 ? Math.round((count / totalCategoryListings) * 100) : 0
+        return {
+          name: cat.name,
+          value: pct > 0 ? pct : 1,
+          count,
+          color: categoryColors[idx % categoryColors.length],
+        }
+      })
+    : defaultCategories.map((c) => ({
+        name: c.name,
+        value: c.pct,
+        count: c.count,
+        color: c.color,
+      }))
+
+  const chartData = formattedCategoryItems.map((c) => ({
+    name: c.name,
+    value: c.value,
+    count: c.count,
+    color: c.color,
+  }))
 
   return (
     <SidebarProvider>
@@ -92,8 +142,8 @@ export default function Page() {
             />
             <StatsCard 
               title="Pending Documents" 
-              value={isLoading ? "..." : "N/A"}
-              subtext="Document endpoint required"
+              value={isLoading ? "..." : (pendingDocsCount > 0 ? pendingDocsCount.toString() : (summary?.pendingDocuments ?? 0).toString())}
+              subtext="Live from applications"
               trendType="neutral"
               icon={FileCheckIcon}
               iconBgColor="bg-indigo-50"
@@ -183,52 +233,23 @@ export default function Page() {
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-6">
                 <h4 className="text-lg font-bold">Top Categories</h4>
-                <button className="text-sm font-semibold text-[#6338f6] hover:underline">View All</button>
+                <Link href="/dashboard/categories" className="text-sm font-semibold text-[#6338f6] hover:underline">
+                  View All
+                </Link>
               </div>
-              <TopCategoriesChart />
+              <TopCategoriesChart data={chartData} totalListings={totalCategoryListings || summary?.activeListings} />
               <div className="grid grid-cols-2 gap-y-3 mt-6">
-                <div className="flex items-center justify-between pr-4">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-[#6338f6]" />
-                    <span className="text-xs text-gray-500">Electronics</span>
+                {formattedCategoryItems.map((item, index) => (
+                  <div key={item.name} className={`flex items-center justify-between ${index % 2 === 0 ? 'pr-4' : 'pl-4 border-l border-gray-100'}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs text-gray-500 truncate">{item.name}</span>
+                    </div>
+                    <span className="text-xs font-bold whitespace-nowrap ml-1">
+                      {item.value}% <span className="text-[10px] text-gray-400 font-normal">({item.count.toLocaleString()})</span>
+                    </span>
                   </div>
-                  <span className="text-xs font-bold">35% <span className="text-[10px] text-gray-400 font-normal">(5,894)</span></span>
-                </div>
-                <div className="flex items-center justify-between pl-4 border-l border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-[#5356ff]" />
-                    <span className="text-xs text-gray-500">Vehicles</span>
-                  </div>
-                  <span className="text-xs font-bold">25% <span className="text-[10px] text-gray-400 font-normal">(4,210)</span></span>
-                </div>
-                <div className="flex items-center justify-between pr-4">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-[#ff70d2]" />
-                    <span className="text-xs text-gray-500">Property</span>
-                  </div>
-                  <span className="text-xs font-bold">15% <span className="text-[10px] text-gray-400 font-normal">(2,525)</span></span>
-                </div>
-                <div className="flex items-center justify-between pl-4 border-l border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-[#ffb340]" />
-                    <span className="text-xs text-gray-500">Fashion</span>
-                  </div>
-                  <span className="text-xs font-bold">12% <span className="text-[10px] text-gray-400 font-normal">(2,020)</span></span>
-                </div>
-                <div className="flex items-center justify-between pr-4">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-[#5ec2ff]" />
-                    <span className="text-xs text-gray-500">Services</span>
-                  </div>
-                  <span className="text-xs font-bold">8% <span className="text-[10px] text-gray-400 font-normal">(1,350)</span></span>
-                </div>
-                <div className="flex items-center justify-between pl-4 border-l border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="size-2 rounded-full bg-[#cbd5e1]" />
-                    <span className="text-xs text-gray-500">Others</span>
-                  </div>
-                  <span className="text-xs font-bold">5% <span className="text-[10px] text-gray-400 font-normal">(843)</span></span>
-                </div>
+                ))}
               </div>
             </div>
 

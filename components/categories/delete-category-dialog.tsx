@@ -38,12 +38,12 @@ export function DeleteCategoryDialog({
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900">Delete Category</h3>
-            <p className="text-xs text-gray-400">This action cannot be undone.</p>
+            <p className="text-xs text-gray-400">The category is archived, not erased.</p>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 text-sm text-gray-600 leading-relaxed">
-          Are you sure you want to delete <strong className="text-gray-900">{categoryName || "this category"}</strong>? All associated details and settings for this category will be permanently removed.
+          Are you sure you want to delete <strong className="text-gray-900">{categoryName || "this category"}</strong>? It will be removed from the marketplace and from this directory. Restoring it afterwards requires a backend change.
         </div>
 
         <div className="flex items-center gap-3 pt-2">

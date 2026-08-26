@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { BellIcon, LogOutIcon } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useSession, signOut } from "@/lib/auth-client"
+import { BellIcon, LogOutIcon } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSession, signOut } from "@/lib/auth-client";
 
 interface DashboardHeaderProps {
-  title?: string
-  description?: string
-  children?: React.ReactNode
+  title?: string;
+  description?: string;
+  children?: React.ReactNode;
 }
 
-export function DashboardHeader({ 
-  title = "Dashboard", 
-  description = "Welcome back! Here's what's happening on your marketplace.",
-  children
+export function DashboardHeader({
+  title = "Dashboard",
+  description = "",
+  children,
 }: DashboardHeaderProps) {
-  const { data: session } = useSession()
+  const { data: session } = useSession();
 
   const handleSignOut = () => {
     window.location.assign("/logout");
@@ -27,16 +27,16 @@ export function DashboardHeader({
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
         <p className="text-sm text-gray-500">{description}</p>
       </div>
-      
+
       <div className="flex items-center gap-4">
         {children}
-        
+
         <div className="flex items-center gap-6 ml-4 border-l border-gray-100 pl-6">
           <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
             <BellIcon className="size-6 text-gray-500" />
             <span className="absolute top-2 right-2 size-2 bg-rose-500 rounded-full border-2 border-white" />
           </button>
-          
+
           <div className="flex items-center gap-3">
             <div className="text-right">
               <p className="text-sm font-bold text-gray-900 leading-tight">
@@ -52,7 +52,7 @@ export function DashboardHeader({
                 {session?.user?.name?.charAt(0).toUpperCase() || "A"}
               </AvatarFallback>
             </Avatar>
-            <button 
+            <button
               onClick={handleSignOut}
               title="Sign Out"
               className="ml-2 p-2 rounded-full text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
@@ -63,5 +63,5 @@ export function DashboardHeader({
         </div>
       </div>
     </header>
-  )
+  );
 }

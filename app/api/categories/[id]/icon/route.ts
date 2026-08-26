@@ -3,23 +3,20 @@ import { getAuthHeader, requireAdmin } from "@/lib/auth";
 
 const BASE_URL = process.env.UPSTREAM_API_URL ?? "https://phsardigital.quizzy.it.com/api/v1";
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
   try {
     const { id } = await params;
-    const payload = await request.json();
     const authHeaders = await getAuthHeader(request);
 
-    const upstreamRes = await fetch(`${BASE_URL}/listings/${encodeURIComponent(id)}`, {
-      method: "PATCH",
+    const upstreamRes = await fetch(`${BASE_URL}/categories/${encodeURIComponent(id)}/icon`, {
+      method: "DELETE",
       headers: {
-        "Content-Type": "application/json",
         Accept: "application/json",
         ...authHeaders,
       },
-      body: JSON.stringify(payload),
     });
 
     const text = await upstreamRes.text();
@@ -37,12 +34,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (data && typeof data === "object") {
         return NextResponse.json(data, { status: upstreamRes.status });
       }
-      return NextResponse.json({ message: "Failed to update listing" }, { status: upstreamRes.status });
+      return NextResponse.json(
+        { message: "Failed to remove category icon" },
+        { status: upstreamRes.status },
+      );
     }
 
-    return NextResponse.json(data, { status: upstreamRes.status });
+    return NextResponse.json(data ?? { success: true }, { status: upstreamRes.status });
   } catch (err: unknown) {
-    console.error("PATCH Listing error:", err);
+    console.error("DELETE Category icon error:", err);
     return NextResponse.json(
       { message: err instanceof Error ? err.message : "Service unavailable." },
       { status: 502 },

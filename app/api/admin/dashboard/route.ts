@@ -21,19 +21,26 @@ export async function GET(request: Request) {
     })
 
     if (summaryRes.ok) {
-      const data = await summaryRes.json()
+      const raw = await summaryRes.json()
+      const data = (raw?.data ?? raw?.payload ?? raw?.summary ?? raw) as Record<string, any>
+
+      const totalUsers = Number(data.totalUsers ?? data.usersCount ?? data.total_users ?? 0)
+      const totalSellers = Number(data.totalSellers ?? data.sellersCount ?? data.total_sellers ?? 0)
+      const rawBuyers = data.totalBuyers ?? data.buyersCount ?? data.total_buyers
+      const totalBuyers = rawBuyers !== undefined ? Number(rawBuyers) : Math.max(0, totalUsers - totalSellers)
+
       const summary: AdminDashboardSummary = {
-        totalUsers: data.totalUsers ?? 0,
-        totalBuyers: (data.totalUsers ?? 0) - (data.totalSellers ?? 0),
-        totalSellers: data.totalSellers ?? 0,
-        activeSellers: data.activeSellers ?? 0,
-        totalListings: data.totalListings ?? 0,
-        activeListings: data.activeListings ?? 0,
-        pendingApplications: data.pendingApplications ?? 0,
-        pendingDocuments: 0,
-        totalTransactions: data.completedPurchases ?? 0,
-        totalRevenue: data.completedSalesValue ?? 0,
-        activeSubscriptions: data.activeSubscriptions ?? 0,
+        totalUsers,
+        totalBuyers,
+        totalSellers,
+        activeSellers: Number(data.activeSellers ?? data.active_sellers ?? totalSellers),
+        totalListings: Number(data.totalListings ?? data.listingsCount ?? data.total_listings ?? 0),
+        activeListings: Number(data.activeListings ?? data.active_listings ?? data.totalListings ?? 0),
+        pendingApplications: Number(data.pendingApplications ?? data.pending_applications ?? 0),
+        pendingDocuments: Number(data.pendingDocuments ?? data.pending_documents ?? 0),
+        totalTransactions: Number(data.completedPurchases ?? data.totalTransactions ?? data.completed_purchases ?? 0),
+        totalRevenue: Number(data.completedSalesValue ?? data.totalRevenue ?? data.completed_sales_value ?? 0),
+        activeSubscriptions: Number(data.activeSubscriptions ?? data.active_subscriptions ?? 0),
         activeSubscriptionsByPlan: data.activeSubscriptionsByPlan ?? {},
         unavailableSources: [],
       }
@@ -68,20 +75,34 @@ export async function GET(request: Request) {
       return Array.isArray(list) ? list : []
     }
 
+    const getTotalCount = (result: PromiseSettledResult<unknown>, list: any[]) => {
+      if (result.status !== "fulfilled" || !result.value) return list.length
+      const val = result.value as Record<string, unknown>
+      return Number(val.totalElements ?? val.total ?? val.count ?? list.length)
+    }
+
     const users = getList(usersData)
     const applications = getList(appsData)
     const purchases = getList(purchasesData)
     const listings = getList(listingsData)
 
+    const totalUsersCount = getTotalCount(usersData, users)
+    const totalListingsCount = getTotalCount(listingsData, listings)
+
+    const sellerCount = users.filter((u: any) => {
+      const roles = Array.isArray(u?.roles) ? u.roles : (typeof u?.roles === "string" ? u.roles.split(",") : [])
+      return roles.some((r: string) => r.toUpperCase().includes("SELLER"))
+    }).length
+
     const summary: AdminDashboardSummary = {
-      totalUsers: users.length,
-      totalBuyers: users.filter((u: any) => !u?.roles?.includes("SELLER")).length,
-      totalSellers: users.filter((u: any) => u?.roles?.includes("SELLER")).length,
-      activeListings: listings.filter((l: any) => l?.status === "ACTIVE").length,
-      pendingApplications: applications.filter((a: any) => String(a?.status).includes("PENDING")).length,
-      pendingDocuments: 0,
+      totalUsers: totalUsersCount,
+      totalBuyers: Math.max(0, totalUsersCount - sellerCount),
+      totalSellers: sellerCount,
+      activeListings: listings.filter((l: any) => String(l?.status).toUpperCase() === "ACTIVE" || !l?.status).length || totalListingsCount,
+      pendingApplications: applications.filter((a: any) => String(a?.status).toUpperCase().includes("PENDING")).length,
+      pendingDocuments: applications.filter((a: any) => String(a?.status).toUpperCase().includes("PENDING") && (Array.isArray(a?.documents) && a.documents.length > 0)).length,
       totalTransactions: purchases.length,
-      totalRevenue: purchases.reduce((acc: number, p: any) => acc + (Number(p?.totalPrice ?? p?.amount) || 0), 0),
+      totalRevenue: purchases.reduce((acc: number, p: any) => acc + (Number(p?.totalPrice ?? p?.amount ?? p?.price) || 0), 0),
       unavailableSources: [],
     }
 
