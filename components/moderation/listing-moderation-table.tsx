@@ -110,7 +110,7 @@ export function ListingModerationTable({
 
   return (
     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="p-8 border-b border-gray-50 flex flex-col gap-4">
+      <div className="p-4 sm:p-6 lg:p-8 border-b border-gray-50 flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h4 className="text-xl font-bold text-gray-900">Active Listings Monitor</h4>
@@ -124,7 +124,7 @@ export function ListingModerationTable({
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Search listings..."
-              className="pl-10 h-10 w-full md:w-64 rounded-xl border-gray-100 bg-gray-50 text-xs font-medium"
+              className="pl-10 h-10 w-full sm:w-64 rounded-xl border-gray-100 bg-gray-50 text-xs font-medium"
             />
           </div>
         </div>
@@ -181,12 +181,12 @@ export function ListingModerationTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-50">
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Product</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Seller</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Price</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Submitted</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
+              <th className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Product</th>
+              <th className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:table-cell">Seller</th>
+              <th className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Category</th>
+              <th className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden md:table-cell">Price</th>
+              <th className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden xl:table-cell">Submitted</th>
+              <th className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -203,9 +203,9 @@ export function ListingModerationTable({
                   onClick={() => onSelectListing?.(item.id)}
                   className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer ${selectedListingId === item.id ? "bg-gray-50/70" : ""}`}
                 >
-                  <td className="px-8 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="size-12 shrink-0 rounded-xl bg-gray-100 overflow-hidden relative">
+                  <td className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                      <div className="size-9 sm:size-12 shrink-0 rounded-xl bg-gray-100 overflow-hidden relative">
                         {item.imageUrl ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={item.imageUrl} alt={item.title} className="size-full object-cover" />
@@ -213,21 +213,21 @@ export function ListingModerationTable({
                           <div className="absolute inset-0 bg-gray-900/5 group-hover:bg-transparent transition-colors" />
                         )}
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-gray-900">{item.title}</p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[180px] lg:max-w-none">{item.title}</p>
                         <p className="text-[10px] font-medium text-gray-400">
                           {item.stockQty} in stock · {item.sold} sold
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-4">
+                  <td className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 hidden sm:table-cell">
                     <span className="text-xs font-bold text-gray-700">{item.sellerName}</span>
                   </td>
-                  <td className="px-8 py-4">
+                  <td className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 hidden lg:table-cell">
                     <span className="text-xs font-medium text-gray-500">{item.categoryName}</span>
                   </td>
-                  <td className="px-8 py-4">
+                  <td className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 hidden md:table-cell">
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-[#6338f6]">
                         {formatPrice(item.discountPrice ?? item.fullPrice)}
@@ -239,10 +239,10 @@ export function ListingModerationTable({
                       )}
                     </div>
                   </td>
-                  <td className="px-8 py-4 text-xs font-medium text-gray-500">
+                  <td className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-xs font-medium text-gray-500 hidden xl:table-cell">
                     {formatDate(item.createdAt)}
                   </td>
-                  <td className="px-8 py-4 text-right">
+                  <td className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 text-right">
                     <Badge variant={statusVariant(item.status)} className="rounded-lg px-3 py-1 text-[10px]">
                       {STATUS_LABELS[item.status] ?? item.status}
                     </Badge>
@@ -260,7 +260,7 @@ export function ListingModerationTable({
         </table>
       </div>
 
-      <div className="p-6 border-t border-gray-50 flex items-center justify-between">
+      <div className="p-4 sm:p-6 border-t border-gray-50 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-gray-400 font-medium">
           Showing {firstRow}-{lastRow} of {totalElements.toLocaleString()}
         </p>

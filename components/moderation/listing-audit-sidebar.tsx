@@ -91,7 +91,7 @@ export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
   }
 
   return (
-    <div className="w-100 flex flex-col gap-6 sticky top-8">
+    <div className="w-full xl:w-96 shrink-0 flex flex-col gap-6 xl:sticky xl:top-8">
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50 flex items-center gap-3">
           <div className="size-8 rounded-lg bg-purple-50 flex items-center justify-center text-[#6338f6]">

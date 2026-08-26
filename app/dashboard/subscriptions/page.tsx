@@ -62,24 +62,8 @@ export default function SubscriptionsPage() {
       <SidebarInset className="bg-[#f8f9fc]">
         <DashboardHeader title="Manage Subscriptions">
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => refetchPlans()}
-              className="rounded-xl border-gray-200 h-11 px-4 font-semibold flex items-center gap-2 bg-white text-gray-700 hover:bg-gray-50"
-            >
-              <RefreshCwIcon
-                size={16}
-                className={isPlansLoading ? "animate-spin" : ""}
-              />
-              Refresh Plans
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-xl border-gray-200 h-11 px-6 font-semibold flex items-center gap-2 bg-white text-gray-700"
-            >
-              <SettingsIcon size={16} />
-              Subscription Settings
-            </Button>
+
+
             <Button className="rounded-xl bg-[#6338f6] hover:bg-[#532edb] h-11 px-6 font-semibold flex items-center gap-2 shadow-sm shadow-purple-500/20">
               <PlusIcon size={16} />
               Create New Plan

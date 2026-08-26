@@ -159,7 +159,7 @@ export default function ListingsModerationPage() {
           description="Review and manage marketplace listings to ensure safety and quality."
         />
 
-        <div className="p-8 space-y-8">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8">
           {isError && (
             <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
               Failed to load listings.{" "}
@@ -169,14 +169,14 @@ export default function ListingsModerationPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {stats.map((stat) => (
               <ModerationStatsCard key={stat.title} {...stat} />
             ))}
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8">
-            <div className="flex-1">
+          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 lg:gap-8">
+            <div className="flex-1 min-w-0">
               <ListingModerationTable
                 page={page}
                 isLoading={isLoading}
