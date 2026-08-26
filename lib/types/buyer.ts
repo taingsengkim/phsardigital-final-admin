@@ -1,15 +1,37 @@
-export type BuyerStatus = "ACTIVE" | "SUSPENDED" | "BANNED" | "PENDING" | string
+export type BuyerStatus = "ACTIVE" | "PENDING" | "SUSPENDED" | "REJECTED" | "BANNED" | string
+
+export const BUYER_STATUSES = ["ACTIVE", "PENDING", "SUSPENDED", "REJECTED", "BANNED"] as const
 
 export interface Buyer {
   id: string
-  name: string
+  username: string
+  fullName: string
   email: string
-  phone: string
+  emailVerified: boolean
+  phone: string | null
+  avatarUrl: string | null
   status: BuyerStatus
-  joinDate: string
-  joinTime: string | null
+  moderatedBy: string | null
+  moderatedAt: string | null
+  moderationReason: string | null
+  joinedAt: string | null
   totalOrders: number
-  totalSpent: string
-  avatar: string | null
-  selected?: boolean
+  totalSpent: number
+}
+
+export interface BuyerPage {
+  content: Buyer[]
+  page: {
+    size: number
+    number: number
+    totalElements: number
+    totalPages: number
+  }
+}
+
+export interface BuyerSummary {
+  total: number
+  active: number
+  suspended: number
+  banned: number
 }
