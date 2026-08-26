@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Hanuman } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +8,12 @@ import StoreProvider from "@/app/StoreProvider";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+});
+
+const hanuman = Hanuman({
+  weight: ["100", "300", "400", "700", "900"],
+  subsets: ["khmer"],
+  variable: "--font-khmer",
 });
 
 export const metadata: Metadata = {
@@ -21,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 import { ToastContainer } from "@/components/ui/toast-popup";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 
 export default function RootLayout({
                                      children,
@@ -34,15 +41,23 @@ export default function RootLayout({
               "h-full",
               "antialiased",
               inter.variable,
+              hanuman.variable,
               "font-sans"
           )}
       >
-      <body className="h-full overflow-hidden flex flex-col">
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=Hanuman:wght@100..900&display=swap" rel="stylesheet" />
+        </head>
+      <body className="h-full overflow-hidden flex flex-col font-sans">
       <StoreProvider>
-        <TooltipProvider>
-          {children}
-          <ToastContainer />
-        </TooltipProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            {children}
+            <ToastContainer />
+          </TooltipProvider>
+        </LanguageProvider>
       </StoreProvider>
       </body>
       </html>

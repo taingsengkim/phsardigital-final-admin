@@ -35,71 +35,28 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 
-// This is sample data.
-const data = {
-  user: {
-    name: "Admin User",
-    email: "Super Admin",
-    avatar: "/avatars/admin.jpg",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: <LayoutDashboardIcon />,
-    },
-    {
-      title: "Buyers",
-      url: "/dashboard/buyers",
-      icon: <UsersIcon />,
-    },
-    {
-      title: "Sellers",
-      url: "/dashboard/sellers",
-      icon: <StoreIcon />,
-    },
-    {
-      title: "Subscriptions",
-      url: "/dashboard/subscriptions",
-      icon: <CreditCardIcon />,
-    },
-    {
-      title: "Categories",
-      url: "/dashboard/categories",
-      icon: <ListIcon />,
-    },
-    {
-      title: "Listings Moderation",
-      url: "/dashboard/listings-moderation",
-      icon: <ShieldCheckIcon />,
-    },
-    {
-      title: "Purchases",
-      url: "/dashboard/purchases",
-      icon: <ShoppingBagIcon />,
-    },
-    {
-      title: "Notifications",
-      url: "/dashboard/notifications",
-      icon: <BellIcon />,
-    },
-    {
-      title: "Reports",
-      url: "/dashboard/reports",
-      icon: <BarChart3Icon />,
-    },
-    {
-      title: "Analytics",
-      url: "/dashboard/analytics",
-      icon: <PieChartIcon />,
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: <SettingsIcon />,
-    },
-  ],
+import { useTranslation } from "@/lib/i18n/LanguageContext"
+import type { TranslationKey } from "@/lib/i18n/translations"
+
+interface NavItemConfig {
+  key: TranslationKey
+  url: string
+  icon: React.ReactNode
 }
+
+const navMainConfigs: NavItemConfig[] = [
+  { key: "navDashboard", url: "/dashboard", icon: <LayoutDashboardIcon /> },
+  { key: "navBuyers", url: "/dashboard/buyers", icon: <UsersIcon /> },
+  { key: "navSellers", url: "/dashboard/sellers", icon: <StoreIcon /> },
+  { key: "navSubscriptions", url: "/dashboard/subscriptions", icon: <CreditCardIcon /> },
+  { key: "navCategories", url: "/dashboard/categories", icon: <ListIcon /> },
+  { key: "navListingsModeration", url: "/dashboard/listings-moderation", icon: <ShieldCheckIcon /> },
+  { key: "navPurchases", url: "/dashboard/purchases", icon: <ShoppingBagIcon /> },
+  { key: "navNotifications", url: "/dashboard/notifications", icon: <BellIcon /> },
+  { key: "navReports", url: "/dashboard/reports", icon: <BarChart3Icon /> },
+  { key: "navAnalytics", url: "/dashboard/analytics", icon: <PieChartIcon /> },
+  { key: "navSettings", url: "#", icon: <SettingsIcon /> },
+]
 
 function SidebarCollapseToggle() {
   const { toggleSidebar, state } = useSidebar()
@@ -128,6 +85,7 @@ function SidebarCollapseToggle() {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { t, language } = useTranslation()
 
   return (
     <Sidebar collapsible="icon" className="border-none h-full transition-all duration-300 relative" {...props}>
@@ -159,21 +117,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           </div>
           <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="truncate font-bold text-lg text-white">Phsar Digital</span>
-            <span className="truncate text-xs text-white/70">Admin Panel</span>
+            <span className="truncate font-bold text-lg text-white">{t("appTitle")}</span>
+            <span className="truncate text-xs text-white/70">{t("adminPanel")}</span>
           </div>
         </Link>
       </SidebarHeader>
       <SidebarContent className="px-2">
         <SidebarMenu>
-          {data.navMain.map((item) => {
+          {navMainConfigs.map((item) => {
+            const title = t(item.key)
             const isActive = pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url))
             
             return (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.key}>
                 <SidebarMenuButton
                   isActive={isActive}
-                  tooltip={item.title}
+                  tooltip={title}
                   render={<Link href={item.url} />}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors",
@@ -183,7 +142,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   )}
                 >
                   <span className="shrink-0">{item.icon}</span>
-                  <span className="font-medium group-data-[collapsible=icon]:hidden">{item.title}</span>
+                  <span className="font-medium group-data-[collapsible=icon]:hidden">{title}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )
@@ -197,11 +156,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="size-8 rounded-lg bg-white/20 flex items-center justify-center mb-3">
               <ShieldIcon className="size-4 text-white" />
             </div>
-            <p className="font-semibold text-white leading-tight mb-1">
-              Secure Marketplace, Trusted by All.
+            <p className="font-semibold text-white leading-tight mb-1 text-xs">
+              {t("sidebarMotto")}
             </p>
-            <p className="text-[10px] text-white/50 mb-3">
-              Phsar Digital Admin Panel
+            <p className="text-[10px] text-white/70 mb-3 flex items-center gap-1.5 font-medium">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={language === "kh" ? "/Flag_of_Cambodia.svg" : "/Flag_of_the_United_Kingdom.svg"}
+                alt="Flag"
+                className="w-4 h-2.5 object-cover rounded-2xs shadow-2xs shrink-0 inline-block"
+              />
+              {t("appTitle")} · {language.toUpperCase()}
             </p>
             <div className="size-6 rounded-full bg-white/20 flex items-center justify-center ml-auto">
               <ArrowRightIcon className="size-3 text-white" />

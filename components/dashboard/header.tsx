@@ -4,6 +4,8 @@ import { BellIcon, LogOutIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "@/lib/auth-client";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
+import { LanguageSelector } from "@/components/dashboard/language-selector";
 
 interface DashboardHeaderProps {
   title?: string;
@@ -12,11 +14,14 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({
-  title = "Dashboard",
+  title,
   description = "",
   children,
 }: DashboardHeaderProps) {
   const { data: session } = useSession();
+  const { t } = useTranslation();
+
+  const headerTitle = title ?? t("navDashboard");
 
   const handleSignOut = () => {
     window.location.assign("/logout");
@@ -28,7 +33,7 @@ export function DashboardHeader({
         <SidebarTrigger className="md:hidden text-gray-500 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-xl transition-all shrink-0" />
         <div className="min-w-0">
           <h1 className="text-lg sm:text-2xl font-extrabold text-gray-900 tracking-tight truncate">
-            {title}
+            {headerTitle}
           </h1>
           {description && (
             <p className="text-xs sm:text-sm font-medium text-gray-500 truncate hidden sm:block">
@@ -42,10 +47,12 @@ export function DashboardHeader({
         {children}
 
         <div className="flex items-center gap-2 sm:gap-4 md:gap-5 ml-2 sm:ml-4 border-l border-gray-200/80 pl-2 sm:pl-4 md:pl-5">
+          <LanguageSelector />
+
           <button 
             type="button"
             className="relative p-2.5 rounded-2xl text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 active:scale-95 transition-all"
-            title="Notifications"
+            title={t("notifications")}
           >
             <BellIcon className="size-5 sm:size-5" />
             <span className="absolute top-2 right-2 size-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
@@ -57,7 +64,7 @@ export function DashboardHeader({
                 {session?.user?.name || "Admin User"}
               </p>
               <p className="text-[10px] font-semibold text-[#6338f6] uppercase tracking-wider">
-                Super Admin
+                {t("superAdmin")}
               </p>
             </div>
             <Avatar className="size-8 sm:size-9 border-2 border-white shadow-sm shrink-0 ring-2 ring-[#6338f6]/10">
@@ -69,7 +76,7 @@ export function DashboardHeader({
             <button
               type="button"
               onClick={handleSignOut}
-              title="Sign Out"
+              title={t("signOut")}
               className="p-1.5 rounded-xl text-gray-400 hover:text-rose-600 hover:bg-rose-50 active:scale-95 transition-all"
             >
               <LogOutIcon className="size-4 sm:size-4" />
