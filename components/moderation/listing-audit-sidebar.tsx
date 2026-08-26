@@ -60,6 +60,12 @@ export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
   const handleUpdateStatus = async (status: string, label: string) => {
     if (!listing) return
 
+    if (status === "SUSPENDED" && internalNotes.trim().length < 10) {
+      setActionResult(null)
+      setActionError("Please enter a suspension reason of at least 10 characters before banning.")
+      return
+    }
+
     setActionError(null)
     setActionResult(null)
 
@@ -161,18 +167,26 @@ export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
-              Suspension reason (used when banning a seller)
-            </p>
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">
+                Suspension Reason <span className="text-rose-500">*</span>
+              </p>
+              <span className={`text-[10px] font-bold ${
+                internalNotes.length > 0 && internalNotes.trim().length < 10
+                  ? "text-rose-500"
+                  : internalNotes.trim().length >= 10
+                  ? "text-emerald-600"
+                  : "text-gray-400"
+              }`}>
+                {internalNotes.length} / {NOTES_MAX_LENGTH} chars (min 10)
+              </span>
+            </div>
             <Textarea
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value.slice(0, NOTES_MAX_LENGTH))}
-              placeholder="Explain the policy violation..."
-              className="bg-gray-50 border-none rounded-2xl min-h-25 text-xs font-medium placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#6338f6]"
+              placeholder="Provide a clear, detailed reason for banning or suspending (min 10 characters)..."
+              className="bg-gray-50/90 border border-gray-200/80 rounded-2xl min-h-24 text-xs font-medium placeholder:text-gray-400 focus:bg-white focus:border-[#6338f6] focus:ring-2 focus:ring-[#6338f6]/20 transition-all"
             />
-            <p className="text-right text-[10px] text-gray-400 font-medium">
-              {internalNotes.length} / {NOTES_MAX_LENGTH} CHARACTERS
-            </p>
           </div>
 
           {actionError && (

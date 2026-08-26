@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontalIcon } from "lucide-react"
+import { MoreHorizontalIcon, BanIcon, ShieldAlertIcon, CheckCircle2Icon } from "lucide-react"
 import type { Buyer, BuyerPage } from "@/lib/types/buyer"
+import { BuyerModerationModal } from "./buyer-moderation-modal"
 
 interface BuyerTableProps {
   page: BuyerPage | undefined
@@ -47,6 +49,11 @@ function pageWindow(current: number, totalPages: number) {
 }
 
 export function BuyerTable({ page, isLoading, isFetching, onPageChange }: BuyerTableProps) {
+  const [activeMenuBuyerId, setActiveMenuBuyerId] = useState<string | null>(null)
+  const [selectedBuyerForMod, setSelectedBuyerForMod] = useState<Buyer | null>(null)
+  const [modActionType, setModActionType] = useState<"suspend" | "ban" | "restore" | null>(null)
+  const [isModModalOpen, setIsModModalOpen] = useState(false)
+
   const buyers: Buyer[] = page?.content ?? []
   const pageNumber = page?.page.number ?? 0
   const pageSize = page?.page.size ?? 10
@@ -54,6 +61,13 @@ export function BuyerTable({ page, isLoading, isFetching, onPageChange }: BuyerT
   const totalPages = page?.page.totalPages ?? 1
   const firstRow = totalElements === 0 ? 0 : pageNumber * pageSize + 1
   const lastRow = Math.min(totalElements, pageNumber * pageSize + buyers.length)
+
+  const handleOpenModeration = (buyer: Buyer, action: "suspend" | "ban" | "restore") => {
+    setSelectedBuyerForMod(buyer)
+    setModActionType(action)
+    setIsModModalOpen(true)
+    setActiveMenuBuyerId(null)
+  }
 
   return (
     <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
@@ -119,10 +133,45 @@ export function BuyerTable({ page, isLoading, isFetching, onPageChange }: BuyerT
                   </td>
                   <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-900 font-semibold hidden xl:table-cell">{buyer.totalOrders.toLocaleString()}</td>
                   <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-[#6338f6] font-extrabold hidden xl:table-cell">{formatCurrency(buyer.totalSpent)}</td>
-                  <td className="px-4 sm:px-6 py-3.5 text-center">
-                    <button className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100/80 active:scale-95 transition-all">
+                  <td className="px-4 sm:px-6 py-3.5 text-center relative">
+                    <button
+                      onClick={() => setActiveMenuBuyerId(activeMenuBuyerId === buyer.id ? null : buyer.id)}
+                      className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100/80 active:scale-95 transition-all"
+                    >
                       <MoreHorizontalIcon size={18} />
                     </button>
+
+                    {activeMenuBuyerId === buyer.id && (
+                      <div className="absolute right-6 top-12 z-20 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 text-left">
+                        {["ACTIVE", "PENDING"].includes(buyer.status) && (
+                          <button
+                            onClick={() => handleOpenModeration(buyer, "suspend")}
+                            className="w-full px-4 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2"
+                          >
+                            <ShieldAlertIcon size={14} />
+                            Suspend Buyer
+                          </button>
+                        )}
+                        {buyer.status !== "BANNED" && (
+                          <button
+                            onClick={() => handleOpenModeration(buyer, "ban")}
+                            className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-gray-50"
+                          >
+                            <BanIcon size={14} />
+                            Ban Buyer
+                          </button>
+                        )}
+                        {["SUSPENDED", "BANNED", "REJECTED"].includes(buyer.status) && (
+                          <button
+                            onClick={() => handleOpenModeration(buyer, "restore")}
+                            className="w-full px-4 py-2 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 border-t border-gray-50"
+                          >
+                            <CheckCircle2Icon size={14} />
+                            Restore Account
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -174,6 +223,14 @@ export function BuyerTable({ page, isLoading, isFetching, onPageChange }: BuyerT
           </button>
         </div>
       </div>
+
+      {/* Moderation Modal for Buyer */}
+      <BuyerModerationModal
+        buyer={selectedBuyerForMod}
+        actionType={modActionType}
+        open={isModModalOpen}
+        onOpenChange={setIsModModalOpen}
+      />
     </div>
   )
 }
