@@ -25,6 +25,9 @@ import {
 import { useGetCategoriesQuery } from "@/lib/redux/service/categoryApi"
 import { ALL_STATUSES } from "@/lib/types/listing"
 
+import { useGetSellersQuery } from "@/lib/redux/service/sellerApi"
+import type { CategoryRecord } from "@/lib/types/category"
+
 const PAGE_SIZE = 10
 
 /** Debounces the search box so typing does not fire a request per keystroke. */
@@ -65,6 +68,7 @@ export default function ListingsModerationPage() {
 
   const { data: counts, isError: isCountsError } = useGetListingStatusCountsQuery(filters)
   const { data: categories = [] } = useGetCategoriesQuery()
+  const { data: sellers = [] } = useGetSellersQuery()
 
   // Any filter change invalidates the current page offset.
   const changeFilter = <T,>(setter: (value: T) => void) => (value: T) => {
@@ -77,27 +81,42 @@ export default function ListingsModerationPage() {
   const selectedListing =
     listings.find((listing) => listing.id === selectedListingId) ?? listings[0] ?? null
 
-  const categoryOptions: CategoryOption[] = useMemo(
-    () =>
-      categories
-        .filter((category) => category.slug)
-        .map((category) => ({ slug: category.slug, name: category.name })),
-    [categories]
-  )
+  const categoryOptions: CategoryOption[] = useMemo(() => {
+    const list: CategoryOption[] = []
+    const visit = (cat: CategoryRecord) => {
+      if (cat.slug && !list.some((c) => c.slug === cat.slug)) {
+        list.push({ slug: cat.slug, name: cat.name })
+      }
+      if (cat.children?.length) {
+        cat.children.forEach(visit)
+      }
+    }
+    categories.forEach(visit)
+    return list
+  }, [categories])
 
-  // Seller options come from the rows on screen - upstream has no admin
-  // seller-directory endpoint to enumerate them from.
   const sellerOptions: SellerOption[] = useMemo(() => {
-    const seen = new Map<string, string>()
+    const list: SellerOption[] = []
+    const seen = new Set<string>()
 
-    for (const listing of listings) {
-      if (listing.sellerId && !seen.has(listing.sellerId)) {
-        seen.set(listing.sellerId, listing.sellerName)
+    // Priority 1: Sellers from the seller API
+    for (const seller of sellers) {
+      if (seller.id && !seen.has(seller.id)) {
+        seen.add(seller.id)
+        list.push({ id: seller.id, name: seller.name || seller.store || seller.id })
       }
     }
 
-    return [...seen].map(([id, name]) => ({ id, name }))
-  }, [listings])
+    // Priority 2: Any additional seller seen in listing results
+    for (const listing of listings) {
+      if (listing.sellerId && !seen.has(listing.sellerId)) {
+        seen.add(listing.sellerId)
+        list.push({ id: listing.sellerId, name: listing.sellerName || listing.sellerId })
+      }
+    }
+
+    return list
+  }, [sellers, listings])
 
   const totalListings = counts
     ? Object.values(counts).reduce((sum, value) => sum + value, 0)

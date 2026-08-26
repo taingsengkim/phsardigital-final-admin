@@ -13,7 +13,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { ListingRecord } from "@/lib/types/listing"
-import { useUpdateListingStatusMutation } from "@/lib/features/listings/listingsApi"
+import {
+  useUpdateListingStatusMutation,
+  useSuspendListingMutation,
+  useRestoreListingMutation,
+} from "@/lib/features/listings/listingsApi"
 import { useSuspendSellerMutation } from "@/lib/redux/service/sellerApi"
 import { formatPrice } from "@/components/moderation/listing-moderation-table"
 
@@ -47,9 +51,11 @@ export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
   const [actionResult, setActionResult] = useState<string | null>(null)
 
   const [updateListingStatus, { isLoading: isUpdatingListing }] = useUpdateListingStatusMutation()
+  const [suspendListing, { isLoading: isSuspendingListing }] = useSuspendListingMutation()
+  const [restoreListing, { isLoading: isRestoringListing }] = useRestoreListingMutation()
   const [suspendSeller, { isLoading: isSuspendingSeller }] = useSuspendSellerMutation()
 
-  const isBusy = isUpdatingListing || isSuspendingSeller
+  const isBusy = isUpdatingListing || isSuspendingListing || isRestoringListing || isSuspendingSeller
 
   const handleUpdateStatus = async (status: string, label: string) => {
     if (!listing) return
@@ -58,7 +64,13 @@ export function ListingAuditSidebar({ listing }: ListingAuditSidebarProps) {
     setActionResult(null)
 
     try {
-      await updateListingStatus({ id: listing.id, status }).unwrap()
+      if (status === "SUSPENDED") {
+        await suspendListing({ id: listing.id, reason: internalNotes.trim() || undefined }).unwrap()
+      } else if (status === "ACTIVE" && (listing.status === "SUSPENDED" || listing.status === "ARCHIVED")) {
+        await restoreListing(listing.id).unwrap()
+      } else {
+        await updateListingStatus({ id: listing.id, status }).unwrap()
+      }
       setActionResult(`${listing.title} — ${label}.`)
     } catch (error) {
       console.error("Failed to update listing status", error)

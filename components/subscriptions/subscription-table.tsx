@@ -114,17 +114,17 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
         
         <div className="flex items-center gap-3">
           <div className="relative flex-1 sm:flex-initial">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
+            <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
             <Input 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by seller ID or plan..." 
-              className="pl-10 bg-gray-50 border-none rounded-xl h-10 w-full sm:w-60 text-xs"
+              className="pl-10 bg-gray-50/90 border border-gray-200/70 rounded-xl h-10 w-full sm:w-64 text-xs font-medium focus:ring-2 focus:ring-[#6338f6]/30 focus:border-[#6338f6]"
             />
           </div>
           <Button 
             onClick={() => handleGrant()}
-            className="rounded-xl bg-[#6338f6] hover:bg-[#532edb] text-white h-10 px-4 flex items-center gap-1.5 text-xs font-semibold shrink-0"
+            className="rounded-xl bg-[#6338f6] hover:bg-[#532edb] text-white h-10 px-4 flex items-center gap-1.5 text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0"
           >
             <PlusIcon size={14} />
             Grant Subscription
@@ -133,7 +133,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
       </div>
       
       {isFetching && !isLoading && (
-        <div className="px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50/50 border-b border-gray-50">
+        <div className="px-6 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 bg-gray-50/50 border-b border-gray-100/60">
           Refreshing subscriptions...
         </div>
       )}
@@ -141,40 +141,40 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
       <div className="overflow-x-auto min-w-full">
         <table className="w-full text-left border-collapse min-w-[640px]">
           <thead>
-            <tr className="border-b border-gray-50 bg-gray-50/30">
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Seller ID</th>
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Plan</th>
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Started</th>
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">Expires</th>
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Listings Used</th>
-              <th className="p-4 sm:p-6 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-center">Actions</th>
+            <tr className="border-b border-gray-100/80 bg-gray-50/50">
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Seller ID</th>
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Plan</th>
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Status</th>
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden sm:table-cell">Started</th>
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden md:table-cell">Expires</th>
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Listings Used</th>
+              <th className="p-4 sm:p-6 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-100/60">
             {isLoading && filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-6 text-sm text-gray-400 text-center">
+                <td colSpan={7} className="p-8 text-sm text-gray-400 text-center font-medium">
                   Loading seller subscriptions...
                 </td>
               </tr>
             ) : filtered.length ? (
               filtered.map((sub) => (
-                <tr key={sub.sellerId} className="hover:bg-gray-50/80 transition-colors">
+                <tr key={sub.sellerId} className="hover:bg-gray-50/90 transition-colors group">
                   <td className="p-4 sm:p-6">
-                    <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[150px] sm:max-w-[200px]">
+                    <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[150px] sm:max-w-[200px] group-hover:text-[#6338f6] transition-colors">
                       {sub.sellerId}
                     </p>
                   </td>
                   <td className="p-4 sm:p-6">
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700">
+                    <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-purple-50 text-purple-700 border border-purple-100">
                       {sub.planDisplayName || sub.planCode}
                     </span>
                   </td>
                   <td className="p-4 sm:p-6">
                     <Badge 
                       variant={statusVariant(sub.status)}
-                      className="font-bold text-[10px] py-0 h-5 whitespace-nowrap"
+                      className="font-extrabold text-[10px] px-2.5 py-0.5 rounded-full whitespace-nowrap"
                     >
                       • {sub.status}
                     </Badge>

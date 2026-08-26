@@ -160,6 +160,26 @@ function byRecencyDesc(left: ListingRecord, right: ListingRecord) {
   return rightAt.localeCompare(leftAt)
 }
 
+function matchesQuery(listing: ListingRecord, query: ListingQuery): boolean {
+  if (query.categorySlug && listing.categorySlug !== query.categorySlug) {
+    return false
+  }
+  if (query.sellerId && listing.sellerId !== query.sellerId) {
+    return false
+  }
+  if (query.search?.trim()) {
+    const q = query.search.trim().toLowerCase()
+    const titleMatch = listing.title.toLowerCase().includes(q)
+    const sellerMatch = listing.sellerName.toLowerCase().includes(q)
+    const categoryMatch = listing.categoryName.toLowerCase().includes(q)
+    const descMatch = listing.description.toLowerCase().includes(q)
+    if (!titleMatch && !sellerMatch && !categoryMatch && !descMatch) {
+      return false
+    }
+  }
+  return true
+}
+
 export const listingsApi = createApi({
   reducerPath: "listingsApi",
   baseQuery: fetchBaseQuery({
@@ -182,69 +202,28 @@ export const listingsApi = createApi({
         const pageNumber = Math.max(arg.pageNumber ?? 0, 0)
         const pageSize = Math.min(Math.max(arg.pageSize ?? 10, 1), MAX_PAGE_SIZE)
 
-        if (arg.status && arg.status !== ALL_STATUSES) {
-          const params = buildSearchParams(arg, { pageNumber, pageSize })
-          const result = await fetchWithBQ(`/listings?${params.toString()}`)
+        const params = buildSearchParams(arg, { pageNumber, pageSize })
+        const result = await fetchWithBQ(`/listings?${params.toString()}`)
 
-          if (result.error) {
-            return { error: result.error as FetchBaseQueryError }
-          }
-
-          const meta = getPageMeta(result.data)
-
-          return {
-            data: {
-              items: extractContent(result.data).map((item, index) => normalizeListing(item, index)),
-              pageNumber,
-              pageSize,
-              totalElements: meta.totalElements,
-              totalPages: meta.totalPages,
-            },
-          }
+        if (result.error) {
+          return { error: result.error as FetchBaseQueryError }
         }
 
-        const merged: ListingRecord[] = []
+        const meta = getPageMeta(result.data)
+        let items = extractContent(result.data).map((item, index) => normalizeListing(item, index))
 
-        for (const status of LISTING_STATUSES) {
-          const { items, error } = await fetchAllPages(fetchWithBQ, { ...arg, status })
-
-          if (error) {
-            // Upstream rejects `status` for non-administrators. Rather than
-            // blanking the page, fall back to the public view (ACTIVE only).
-            if (error.status === 403) {
-              const fallback = await fetchAllPages(fetchWithBQ, {
-                ...arg,
-                status: undefined,
-              })
-
-              if (fallback.error) {
-                return { error: fallback.error }
-              }
-
-              merged.length = 0
-              merged.push(
-                ...fallback.items.map((item, index) => normalizeListing(item, index))
-              )
-              break
-            }
-
-            return { error }
-          }
-
-          merged.push(...items.map((item, index) => normalizeListing(item, index)))
+        // Client-side validation filter
+        if (arg.categorySlug || arg.sellerId || arg.search) {
+          items = items.filter((item) => matchesQuery(item, arg))
         }
-
-        merged.sort(byRecencyDesc)
-
-        const start = pageNumber * pageSize
 
         return {
           data: {
-            items: merged.slice(start, start + pageSize),
+            items,
             pageNumber,
             pageSize,
-            totalElements: merged.length,
-            totalPages: Math.max(Math.ceil(merged.length / pageSize), 1),
+            totalElements: meta.totalElements,
+            totalPages: meta.totalPages,
           },
         }
       },
@@ -257,26 +236,20 @@ export const listingsApi = createApi({
           : [{ type: "Listings" as const, id: "LIST" }],
     }),
 
-    /** One cheap count request per status, so the stat cards are real numbers. */
+    /** One count request per status sequentially to avoid upstream socket flooding. */
     getListingStatusCounts: builder.query<ListingStatusCounts, Omit<ListingQuery, "status">>({
       queryFn: async (arg, _api, _extraOptions, fetchWithBQ) => {
-        const results = await Promise.all(
-          LISTING_STATUSES.map(async (status) => {
-            const params = buildSearchParams({ ...arg, status }, { pageNumber: 0, pageSize: 1 })
-            const result = await fetchWithBQ(`/listings?${params.toString()}`)
-
-            return { status, result }
-          })
-        )
-
         const counts: ListingStatusCounts = {}
 
-        for (const { status, result } of results) {
-          if (result.error) {
-            return { error: result.error as FetchBaseQueryError }
-          }
+        for (const status of LISTING_STATUSES) {
+          const params = buildSearchParams({ ...arg, status }, { pageNumber: 0, pageSize: 1 })
+          const result = await fetchWithBQ(`/listings?${params.toString()}`)
 
-          counts[status] = getPageMeta(result.data).totalElements
+          if (!result.error) {
+            counts[status] = getPageMeta(result.data).totalElements
+          } else {
+            counts[status] = 0
+          }
         }
 
         return { data: counts }
@@ -296,6 +269,31 @@ export const listingsApi = createApi({
         { type: "Listings", id: "COUNTS" },
       ],
     }),
+
+    suspendListing: builder.mutation<ListingRecord, { id: string; reason?: string }>({
+      query: ({ id, reason }) => ({
+        url: `/admin/listings/${encodeURIComponent(id)}/suspend`,
+        method: "PATCH",
+        body: { reason: reason || "Listing suspended by administrator." },
+      }),
+      transformResponse: (response: unknown) => normalizeListing(response),
+      invalidatesTags: [
+        { type: "Listings", id: "LIST" },
+        { type: "Listings", id: "COUNTS" },
+      ],
+    }),
+
+    restoreListing: builder.mutation<ListingRecord, string>({
+      query: (id) => ({
+        url: `/admin/listings/${encodeURIComponent(id)}/restore`,
+        method: "PATCH",
+      }),
+      transformResponse: (response: unknown) => normalizeListing(response),
+      invalidatesTags: [
+        { type: "Listings", id: "LIST" },
+        { type: "Listings", id: "COUNTS" },
+      ],
+    }),
   }),
 })
 
@@ -303,4 +301,6 @@ export const {
   useGetListingsQuery,
   useGetListingStatusCountsQuery,
   useUpdateListingStatusMutation,
+  useSuspendListingMutation,
+  useRestoreListingMutation,
 } = listingsApi

@@ -13,6 +13,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Phsar Digital Admin",
   description: "Marketplace administration dashboard",
+  icons: {
+    icon: "/Phsar Digital purple-light.png",
+    shortcut: "/Phsar Digital purple-light.png",
+    apple: "/Phsar Digital purple-light.png",
+  },
 };
 
 export default function RootLayout({

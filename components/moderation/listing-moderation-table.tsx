@@ -35,6 +35,8 @@ interface ListingModerationTableProps {
   onPageChange: (pageNumber: number) => void
 }
 
+import { CustomSelect } from "@/components/ui/custom-select"
+
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "Live",
   DRAFT: "Draft",
@@ -80,7 +82,7 @@ function pageWindow(current: number, totalPages: number) {
 }
 
 const selectClass =
-  "bg-gray-50 px-4 h-10 rounded-xl text-xs font-bold text-gray-600 border border-transparent hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#6338f6] transition-colors"
+  "bg-gray-50/90 hover:bg-gray-100/90 px-4 h-10 rounded-xl text-xs font-bold text-gray-700 border border-gray-200/80 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#6338f6]/30 focus:border-[#6338f6] transition-all cursor-pointer shadow-2xs"
 
 export function ListingModerationTable({
   page,
@@ -108,6 +110,16 @@ export function ListingModerationTable({
   const firstRow = totalElements === 0 ? 0 : pageNumber * pageSize + 1
   const lastRow = Math.min(totalElements, pageNumber * pageSize + listings.length)
 
+  const hasActiveFilters =
+    status !== ALL_STATUSES || categorySlug !== "" || sellerId !== "" || search !== ""
+
+  const handleResetFilters = () => {
+    onStatusChange(ALL_STATUSES)
+    onCategoryChange("")
+    onSellerChange("")
+    onSearchChange("")
+  }
+
   return (
     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="p-4 sm:p-6 lg:p-8 border-b border-gray-50 flex flex-col gap-4">
@@ -130,44 +142,51 @@ export function ListingModerationTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <select
+          <CustomSelect
             value={status}
-            onChange={(event) => onStatusChange(event.target.value)}
-            className={selectClass}
-          >
-            <option value={ALL_STATUSES}>All statuses</option>
-            {LISTING_STATUSES.map((option) => (
-              <option key={option} value={option}>
-                {STATUS_LABELS[option] ?? option}
-              </option>
-            ))}
-          </select>
+            onChange={onStatusChange}
+            options={[
+              { value: ALL_STATUSES, label: "All statuses" },
+              ...LISTING_STATUSES.map((opt) => ({
+                value: opt,
+                label: STATUS_LABELS[opt] ?? opt,
+              })),
+            ]}
+          />
 
-          <select
+          <CustomSelect
             value={categorySlug}
-            onChange={(event) => onCategoryChange(event.target.value)}
-            className={selectClass}
-          >
-            <option value="">All categories</option>
-            {categoryOptions.map((option) => (
-              <option key={option.slug} value={option.slug}>
-                {option.name}
-              </option>
-            ))}
-          </select>
+            onChange={onCategoryChange}
+            options={[
+              { value: "", label: "All categories" },
+              ...categoryOptions.map((opt) => ({
+                value: opt.slug,
+                label: opt.name,
+              })),
+            ]}
+          />
 
-          <select
+          <CustomSelect
             value={sellerId}
-            onChange={(event) => onSellerChange(event.target.value)}
-            className={selectClass}
-          >
-            <option value="">All sellers</option>
-            {sellerOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
+            onChange={onSellerChange}
+            options={[
+              { value: "", label: "All sellers" },
+              ...sellerOptions.map((opt) => ({
+                value: opt.id,
+                label: opt.name,
+              })),
+            ]}
+          />
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="px-3 h-10 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors"
+            >
+              Reset Filters
+            </button>
+          )}
 
           {isFetching && !isLoading && (
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">

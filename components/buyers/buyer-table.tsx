@@ -66,59 +66,61 @@ export function BuyerTable({ page, isLoading, isFetching, onPageChange }: BuyerT
       <div className="overflow-x-auto min-w-full">
         <table className="w-full text-left border-collapse min-w-[320px]">
           <thead>
-            <tr className="border-b border-gray-50">
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider">Buyer</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:table-cell">Email</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Phone</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">Join Date</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider hidden xl:table-cell">Total Orders</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider hidden xl:table-cell">Total Spent</th>
-              <th className="px-4 sm:px-6 py-3.5 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Action</th>
+            <tr className="border-b border-gray-100/80 bg-gray-50/50">
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Buyer</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden sm:table-cell">Email</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Phone</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Status</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden md:table-cell">Join Date</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden xl:table-cell">Total Orders</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest hidden xl:table-cell">Total Spent</th>
+              <th className="px-4 sm:px-6 py-3.5 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest text-center">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-gray-100/60">
             {isLoading && buyers.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-6 text-sm text-gray-400 text-center">
+                <td colSpan={8} className="p-8 text-sm text-gray-400 text-center font-medium">
                   Loading buyers...
                 </td>
               </tr>
             ) : buyers.length ? (
               buyers.map((buyer) => (
-                <tr key={buyer.id} className="hover:bg-gray-50/80 transition-colors">
+                <tr key={buyer.id} className="hover:bg-gray-50/90 transition-colors group">
                   <td className="px-4 sm:px-6 py-3.5">
                     <div className="flex items-center gap-2.5 sm:gap-3">
-                      <Avatar className="size-9 sm:size-10 shrink-0">
+                      <Avatar className="size-9 sm:size-10 shrink-0 ring-2 ring-gray-100 group-hover:ring-[#6338f6]/20 transition-all shadow-xs">
                         <AvatarImage src={buyer.avatarUrl ?? undefined} />
-                        <AvatarFallback>{(buyer.fullName || "?").substring(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback className="bg-gradient-to-br from-[#6338f6]/10 to-[#6338f6]/20 text-[#6338f6] font-extrabold text-xs">
+                          {(buyer.fullName || "?").substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[130px] sm:max-w-[180px] md:max-w-none">{buyer.fullName}</p>
-                        <p className="text-[10px] text-gray-400 truncate max-w-[130px] sm:max-w-[180px]">{buyer.username || buyer.id}</p>
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[130px] sm:max-w-[180px] md:max-w-none group-hover:text-[#6338f6] transition-colors">{buyer.fullName}</p>
+                        <p className="text-[10px] font-medium text-gray-400 truncate max-w-[130px] sm:max-w-[180px]">{buyer.username || buyer.id}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
+                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-500 hidden sm:table-cell font-medium">
                     <span className="truncate block max-w-[160px] md:max-w-[220px]">{buyer.email}</span>
                   </td>
-                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-500 hidden lg:table-cell">{buyer.phone ?? "—"}</td>
+                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-500 hidden lg:table-cell font-medium">{buyer.phone ?? "—"}</td>
                   <td className="px-4 sm:px-6 py-3.5">
                     <Badge
                       variant={statusVariant(buyer.status)}
-                      className="font-bold text-[10px] whitespace-nowrap"
+                      className="font-extrabold text-[10px] whitespace-nowrap px-2.5 py-0.5 rounded-full"
                     >
                       • {buyer.status}
                     </Badge>
                   </td>
                   <td className="px-4 sm:px-6 py-3.5 hidden md:table-cell">
-                    <p className="text-xs sm:text-sm text-gray-900">{formatDate(buyer.joinedAt)}</p>
-                    {formatTime(buyer.joinedAt) && <p className="text-[10px] text-gray-400">{formatTime(buyer.joinedAt)}</p>}
+                    <p className="text-xs sm:text-sm font-semibold text-gray-800">{formatDate(buyer.joinedAt)}</p>
+                    {formatTime(buyer.joinedAt) && <p className="text-[10px] text-gray-400 font-medium">{formatTime(buyer.joinedAt)}</p>}
                   </td>
-                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-900 font-medium hidden xl:table-cell">{buyer.totalOrders.toLocaleString()}</td>
-                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-900 font-bold hidden xl:table-cell">{formatCurrency(buyer.totalSpent)}</td>
+                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-gray-900 font-semibold hidden xl:table-cell">{buyer.totalOrders.toLocaleString()}</td>
+                  <td className="px-4 sm:px-6 py-3.5 text-xs sm:text-sm text-[#6338f6] font-extrabold hidden xl:table-cell">{formatCurrency(buyer.totalSpent)}</td>
                   <td className="px-4 sm:px-6 py-3.5 text-center">
-                    <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                    <button className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100/80 active:scale-95 transition-all">
                       <MoreHorizontalIcon size={18} />
                     </button>
                   </td>

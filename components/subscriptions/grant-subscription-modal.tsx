@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { CustomSelect } from "@/components/ui/custom-select"
 import type { SubscriptionPlan, SellerSubscription } from "@/lib/types/subscription"
 import { useGrantSellerSubscriptionMutation } from "@/lib/redux/service/subscriptionApi"
 
@@ -95,18 +96,16 @@ export function GrantSubscriptionModal({
             <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 block">
               Subscription Plan
             </Label>
-            <select
+            <CustomSelect
               value={planCode}
-              onChange={(e) => setPlanCode(e.target.value)}
-              required
-              className="w-full bg-gray-50 border border-gray-100 rounded-xl h-11 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#6338f6]"
-            >
-              {plans.map((plan) => (
-                <option key={plan.code || plan.plan} value={plan.code || plan.plan}>
-                  {plan.displayName} (${plan.priceUsd}/mo)
-                </option>
-              ))}
-            </select>
+              onChange={setPlanCode}
+              options={plans.map((plan) => ({
+                value: plan.code || plan.plan || "",
+                label: `${plan.displayName} ($${plan.priceUsd}/mo)`,
+              }))}
+              className="w-full"
+              triggerClassName="h-11 border-gray-100 rounded-xl bg-gray-50 font-medium text-sm"
+            />
           </div>
 
           <div>
