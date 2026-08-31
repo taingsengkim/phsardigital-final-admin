@@ -11,6 +11,8 @@ import {
   useCancelSellerSubscriptionMutation,
 } from "@/lib/redux/service/subscriptionApi"
 import { GrantSubscriptionModal } from "./grant-subscription-modal"
+import { CustomSelect } from "@/components/ui/custom-select"
+import { getApiErrorMessage } from "@/lib/redux/service/api-utils"
 
 interface SubscriptionTableProps {
   plans: SubscriptionPlan[]
@@ -44,6 +46,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 
 export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const [status, setStatus] = useState("")
+  const [planCode, setPlanCode] = useState("")
   const [search, setSearch] = useState("")
   const [pageNumber, setPageNumber] = useState(0)
   const [activeMenuSellerId, setActiveMenuSellerId] = useState<string | null>(null)
@@ -54,6 +57,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
 
   const { data, isLoading, isFetching } = useGetSellerSubscriptionsQuery({
     status: status || undefined,
+    planCode: planCode || undefined,
     pageNumber,
     pageSize: 10,
   })
@@ -67,7 +71,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const firstRow = totalElements === 0 ? 0 : pageNumber * pageSize + 1
   const lastRow = Math.min(totalElements, pageNumber * pageSize + subscriptions.length)
 
-  // Filter client side search by sellerId or planCode if provided
+  // Upstream has no seller search parameter, so this narrows the loaded page only.
   const filtered = subscriptions.filter((sub) => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
@@ -103,7 +107,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
       showToast({
         type: "error",
         title: "Cancellation Failed",
-        message: err instanceof Error ? err.message : "Failed to cancel subscription.",
+        message: getApiErrorMessage(err, "Failed to cancel subscription."),
       })
     }
   }
@@ -132,12 +136,27 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
         </div>
         
         <div className="flex items-center gap-3">
+          <CustomSelect
+            value={planCode}
+            onChange={(value) => {
+              setPlanCode(value)
+              setPageNumber(0)
+            }}
+            options={[
+              { value: "", label: "All plans" },
+              ...plans.map((plan) => ({
+                value: plan.code || plan.plan || "",
+                label: plan.displayName || plan.code || "Plan",
+              })),
+            ]}
+            triggerClassName="h-10 rounded-xl bg-gray-50/90 border border-gray-200/70 text-xs font-bold"
+          />
           <div className="relative flex-1 sm:flex-initial">
             <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 size-4" />
-            <Input 
+            <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by seller ID or plan..." 
+              placeholder="Filter this page by seller ID..."
               className="pl-10 bg-gray-50/90 border border-gray-200/70 rounded-xl h-10 w-full sm:w-64 text-xs font-medium focus:ring-2 focus:ring-[#6338f6]/30 focus:border-[#6338f6]"
             />
           </div>
@@ -205,7 +224,10 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
                     {formatDate(sub.expiresAt)}
                   </td>
                   <td className="p-4 sm:p-6 text-xs sm:text-sm text-gray-700 font-medium hidden lg:table-cell">
-                    {sub.listingsUsed.toLocaleString()} / {sub.listingLimit === null ? "∞" : sub.listingLimit}
+                    {sub.listingsUsed.toLocaleString()} /{" "}
+                    {sub.listingLimit === null || sub.listingLimit < 0
+                      ? "Unlimited"
+                      : sub.listingLimit.toLocaleString()}
                   </td>
                   <td className="p-4 sm:p-6 text-center relative">
                     <button 
@@ -288,7 +310,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
         open={isConfirmCancelOpen}
         onOpenChange={setIsConfirmCancelOpen}
         title="Cancel Seller Subscription"
-        description={`Are you sure you want to cancel the subscription for seller "${cancelSellerId}"? This action takes effect immediately.`}
+        description={`Cancel the subscription for seller "${cancelSellerId}"? This takes effect IMMEDIATELY and there is NO REFUND — the seller loses the rest of a period they already paid for, and nothing in the system records that they are owed anything. Use this for moderation, not customer service.`}
         confirmText="Cancel Subscription"
         variant="danger"
         isLoading={isCancelling}

@@ -17,6 +17,74 @@ export function toNumber(value: unknown) {
   return 0
 }
 
+/**
+ * Turn an RTK Query rejection into something worth showing a user.
+ *
+ * RTK rejects with `{ status, data }`, never with an `Error`, so the common
+ * `err instanceof Error ? err.message : fallback` check always loses the
+ * server's message. Upstream returns `{ message, code, status }` for most
+ * failures and Spring's field errors for a 400, so pull the most specific
+ * text available.
+ */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!error || typeof error !== "object") {
+    return fallback
+  }
+
+  const candidate = error as { status?: unknown; data?: unknown; message?: unknown }
+  const data = candidate.data
+
+  if (typeof data === "string" && data.trim()) {
+    return data
+  }
+
+  if (data && typeof data === "object") {
+    const body = data as Record<string, unknown>
+
+    // Spring validation: the response names the offending field.
+    const fieldErrors = body.errors ?? body.fieldErrors ?? body.violations
+    if (Array.isArray(fieldErrors) && fieldErrors.length) {
+      const described = fieldErrors
+        .map((entry) => {
+          const item = (entry ?? {}) as Record<string, unknown>
+          const field = toText(item.field) || toText(item.propertyPath)
+          const detail =
+            toText(item.defaultMessage) || toText(item.message) || toText(item.error)
+
+          if (field && detail) return `${field}: ${detail}`
+          return detail || field
+        })
+        .filter(Boolean)
+
+      if (described.length) {
+        return described.join("; ")
+      }
+    }
+
+    for (const key of ["message", "detail", "error", "title"]) {
+      const value = body[key]
+      if (typeof value === "string" && value.trim()) {
+        return value
+      }
+    }
+  }
+
+  // A network/parsing failure surfaces as a SerializedError with a message.
+  if (typeof candidate.message === "string" && candidate.message.trim()) {
+    return candidate.message
+  }
+
+  if (typeof candidate.status === "number") {
+    return `${fallback} (HTTP ${candidate.status})`
+  }
+
+  if (typeof candidate.status === "string") {
+    return `${fallback} (${candidate.status})`
+  }
+
+  return fallback
+}
+
 export function extractList(response: unknown, key: string = "users") {
   if (Array.isArray(response)) return response
 

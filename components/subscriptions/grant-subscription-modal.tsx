@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { showToast } from "@/components/ui/toast-popup"
+import { getApiErrorMessage } from "@/lib/redux/service/api-utils"
 import type { SubscriptionPlan, SellerSubscription } from "@/lib/types/subscription"
 import { useGrantSellerSubscriptionMutation } from "@/lib/redux/service/subscriptionApi"
 
@@ -25,8 +26,11 @@ export function GrantSubscriptionModal({
 }: GrantSubscriptionModalProps) {
   const [sellerId, setSellerId] = useState("")
   const [planCode, setPlanCode] = useState("")
-  const [days, setDays] = useState(30)
+  // Blank means "use the plan's own durationDays", which is what the API does.
+  const [days, setDays] = useState<number | "">("")
   const [extendExisting, setExtendExisting] = useState(false)
+
+  const selectedPlan = plans.find((plan) => (plan.code || plan.plan) === planCode)
 
   const [grantSubscription, { isLoading }] = useGrantSellerSubscriptionMutation()
 
@@ -34,12 +38,12 @@ export function GrantSubscriptionModal({
     if (subscription) {
       setSellerId(subscription.sellerId)
       setPlanCode(subscription.planCode)
-      setDays(30)
+      setDays("")
       setExtendExisting(subscription.status === "ACTIVE")
     } else {
       setSellerId("")
-      setPlanCode(plans[0]?.code || "BASIC")
-      setDays(30)
+      setPlanCode(plans[0]?.code || "")
+      setDays("")
       setExtendExisting(false)
     }
   }, [subscription, plans, open])
@@ -61,7 +65,8 @@ export function GrantSubscriptionModal({
         sellerId: sellerId.trim(),
         body: {
           planCode,
-          days: Number(days),
+          // Omitted entirely so the server falls back to the plan duration.
+          ...(days === "" ? {} : { days: Number(days) }),
           extendExisting,
         },
       }).unwrap()
@@ -77,7 +82,7 @@ export function GrantSubscriptionModal({
       showToast({
         type: "error",
         title: "Subscription Error",
-        message: err instanceof Error ? err.message : "Failed to update seller subscription.",
+        message: getApiErrorMessage(err, "Failed to update seller subscription."),
       })
     }
   }
@@ -115,7 +120,9 @@ export function GrantSubscriptionModal({
               onChange={setPlanCode}
               options={plans.map((plan) => ({
                 value: plan.code || plan.plan || "",
-                label: `${plan.displayName} ($${plan.priceUsd}/mo)`,
+                label: `${plan.displayName} — $${(plan.priceUsd ?? 0).toFixed(2)} / ${plan.durationDays ?? 30}d${
+                  plan.active === false ? " (retired)" : ""
+                }`,
               }))}
               className="w-full"
               triggerClassName="h-11 border-gray-100 rounded-xl bg-gray-50 font-medium text-sm"
@@ -124,17 +131,21 @@ export function GrantSubscriptionModal({
 
           <div>
             <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 block">
-              Duration Days
+              Duration Days (optional)
             </Label>
             <Input
               type="number"
               min="1"
               max="3650"
               value={days}
-              onChange={(e) => setDays(parseInt(e.target.value) || 30)}
-              required
+              onChange={(e) => setDays(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+              placeholder={`Plan default (${selectedPlan?.durationDays ?? 30} days)`}
               className="bg-gray-50 border-gray-100 rounded-xl h-11 text-sm font-medium"
             />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Leave blank to use the plan&apos;s own duration. No payment is taken — this comps the
+              seller.
+            </p>
           </div>
 
           <div className="flex items-center gap-3 pt-2">

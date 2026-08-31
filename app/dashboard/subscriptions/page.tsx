@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -9,10 +9,12 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { PlanCard } from "@/components/subscriptions/plan-card";
 import { SubscriptionTable } from "@/components/subscriptions/subscription-table";
 import { EditPlanModal } from "@/components/subscriptions/edit-plan-modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { showToast } from "@/components/ui/toast-popup";
 import {
   UsersIcon,
-  DollarSignIcon,
-  TrendingDownIcon,
+  LayersIcon,
+  TagIcon,
   PlusIcon,
   ZapIcon,
   CrownIcon,
@@ -20,13 +22,25 @@ import {
   DiamondIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGetSubscriptionPlansQuery } from "@/lib/redux/service/subscriptionApi";
+import {
+  useGetSubscriptionPlansQuery,
+  useActivateSubscriptionPlanMutation,
+  useDeactivateSubscriptionPlanMutation,
+} from "@/lib/redux/service/subscriptionApi";
 import { useGetAdminDashboardSummaryQuery } from "@/lib/redux/service/dashboardApi";
+import { getApiErrorMessage } from "@/lib/redux/service/api-utils";
 import type { SubscriptionPlan } from "@/lib/types/subscription";
+
+function formatLimit(limit: number | null | undefined) {
+  return limit === null || limit === undefined || limit < 0
+    ? "Unlimited active listings"
+    : `Up to ${limit.toLocaleString()} active listings`;
+}
 
 export default function SubscriptionsPage() {
   const [selectedPlanForEdit, setSelectedPlanForEdit] = useState<SubscriptionPlan | null>(null);
   const [isEditPlanOpen, setIsEditPlanOpen] = useState(false);
+  const [planToToggle, setPlanToToggle] = useState<SubscriptionPlan | null>(null);
 
   const {
     data: plans = [],
@@ -38,9 +52,20 @@ export default function SubscriptionsPage() {
   const { data: summary, isLoading: isSummaryLoading } =
     useGetAdminDashboardSummaryQuery();
 
+  const [activatePlan, { isLoading: isActivating }] = useActivateSubscriptionPlanMutation();
+  const [deactivatePlan, { isLoading: isDeactivating }] = useDeactivateSubscriptionPlanMutation();
+
+  const isTogglingStatus = isActivating || isDeactivating;
+
+  // The catalogue is ordered by sortOrder, the same order sellers see.
+  const orderedPlans = useMemo(
+    () => [...plans].sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0)),
+    [plans],
+  );
+
   const activeSubscribers = summary?.activeSubscriptions ?? 0;
-  const monthlyRevenue =
-    summary?.completedSalesValue ?? summary?.totalRevenue ?? 0;
+  const livePlans = orderedPlans.filter((plan) => plan.active !== false).length;
+  const retiredPlans = orderedPlans.length - livePlans;
 
   const handleCreatePlan = () => {
     setSelectedPlanForEdit(null);
@@ -50,6 +75,40 @@ export default function SubscriptionsPage() {
   const handleEditPlan = (plan: SubscriptionPlan) => {
     setSelectedPlanForEdit(plan);
     setIsEditPlanOpen(true);
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!planToToggle) return;
+
+    const code = planToToggle.code || planToToggle.plan || "";
+    const retiring = planToToggle.active !== false;
+
+    try {
+      if (retiring) {
+        await deactivatePlan(code).unwrap();
+      } else {
+        await activatePlan(code).unwrap();
+      }
+
+      showToast({
+        type: "success",
+        title: retiring ? "Plan Retired" : "Plan Restored",
+        message: retiring
+          ? `"${planToToggle.displayName}" is off the public pricing page. Current subscribers keep it until their period ends.`
+          : `"${planToToggle.displayName}" is back on the public pricing page.`,
+      });
+      setPlanToToggle(null);
+    } catch (err: unknown) {
+      showToast({
+        type: "error",
+        title: retiring ? "Could Not Retire Plan" : "Could Not Restore Plan",
+        message: getApiErrorMessage(
+          err,
+          retiring ? "Failed to retire plan." : "Failed to restore plan.",
+        ),
+      });
+      setPlanToToggle(null);
+    }
   };
 
   const getPlanIcon = (planName?: string) => {
@@ -77,7 +136,10 @@ export default function SubscriptionsPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-[#f8f9fc]">
-        <DashboardHeader title="Manage Subscriptions">
+        <DashboardHeader
+          title="Manage Subscriptions"
+          description="Set the plan catalogue and see which sellers are on what."
+        >
           <div className="flex items-center gap-3">
             <Button
               onClick={handleCreatePlan}
@@ -97,29 +159,29 @@ export default function SubscriptionsPage() {
               value={
                 isSummaryLoading ? "..." : activeSubscribers.toLocaleString()
               }
-              trend="Live from API"
-              trendType="up"
+              subtext="Sellers on a running plan"
+              trendType="neutral"
               icon={UsersIcon}
               iconBgColor="bg-blue-50"
               iconColor="text-blue-600"
             />
             <StatsCard
-              title="MONTHLY REVENUE"
-              value={isSummaryLoading ? "..." : `$${monthlyRevenue.toFixed(2)}`}
-              trend="Live from API"
-              trendType="up"
-              icon={DollarSignIcon}
+              title="PLANS ON SALE"
+              value={isPlansLoading ? "..." : livePlans.toLocaleString()}
+              subtext="Listed on the public pricing page"
+              trendType="neutral"
+              icon={TagIcon}
               iconBgColor="bg-emerald-50"
               iconColor="text-emerald-500"
             />
             <StatsCard
-              title="CANCELLATION RATE"
-              value="0.0%"
-              trend="Standard"
+              title="RETIRED PLANS"
+              value={isPlansLoading ? "..." : retiredPlans.toLocaleString()}
+              subtext="Kept for existing subscribers"
               trendType="neutral"
-              icon={TrendingDownIcon}
-              iconBgColor="bg-rose-50"
-              iconColor="text-rose-500"
+              icon={LayersIcon}
+              iconBgColor="bg-amber-50"
+              iconColor="text-amber-500"
             />
           </div>
 
@@ -127,7 +189,7 @@ export default function SubscriptionsPage() {
           <div>
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Subscription Plans ({plans.length})
+                Subscription Plans ({orderedPlans.length})
               </h4>
               {isPlansError && (
                 <button
@@ -140,39 +202,40 @@ export default function SubscriptionsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {isPlansLoading && plans.length === 0 ? (
+              {isPlansLoading && orderedPlans.length === 0 ? (
                 <div className="col-span-full p-8 text-center text-sm text-gray-400">
                   Loading subscription plans from API...
                 </div>
               ) : (
-                plans.map((planItem, index) => {
+                orderedPlans.map((planItem, index) => {
                   const planCode = planItem?.code || planItem?.plan || `PLAN_${index}`;
                   const displayName = planItem?.displayName || planCode || "Subscription";
                   const durationDays = planItem?.durationDays ?? 30;
                   const priceUsd = typeof planItem?.priceUsd === "number" ? planItem.priceUsd : 0;
-
-                  const limitText =
-                    planItem?.listingLimit === null || planItem?.listingLimit === undefined || planItem?.listingLimit === -1
-                      ? "Unlimited active listings"
-                      : `Up to ${planItem.listingLimit} active listings`;
+                  const isPlanActive = planItem.active !== false;
 
                   return (
                     <PlanCard
                       key={planCode || index}
-                      title={`${displayName} Plan`}
-                      description={`Valid for ${durationDays} days`}
+                      title={displayName}
+                      description={
+                        priceUsd === 0
+                          ? `Free · activates instantly for ${durationDays} days`
+                          : `Valid for ${durationDays} days`
+                      }
                       price={`$${priceUsd.toFixed(2)}`}
+                      // Only what the API actually defines for a plan.
                       features={[
-                        limitText,
-                        "Store profile & catalog",
-                        "Live chat & messaging support",
-                        "Featured marketplace visibility",
+                        formatLimit(planItem?.listingLimit),
+                        `Runs for ${durationDays} days per purchase`,
+                        `Plan code ${planCode}`,
                       ]}
                       icon={getPlanIcon(planCode)}
                       iconBgColor={getPlanBg(planCode)}
-                      isActive={planCode.toUpperCase() === "STANDARD"}
-                      isPlanActive={planItem.active !== false}
+                      isPlanActive={isPlanActive}
+                      isTogglingStatus={isTogglingStatus && planToToggle?.code === planItem.code}
                       onEdit={() => handleEditPlan(planItem)}
+                      onToggleStatus={() => setPlanToToggle(planItem)}
                     />
                   );
                 })
@@ -181,7 +244,7 @@ export default function SubscriptionsPage() {
           </div>
 
           {/* Table Section */}
-          <SubscriptionTable plans={plans} />
+          <SubscriptionTable plans={orderedPlans} />
         </div>
 
         {/* Modal for Creating / Editing Plan */}
@@ -189,6 +252,28 @@ export default function SubscriptionsPage() {
           plan={selectedPlanForEdit}
           open={isEditPlanOpen}
           onOpenChange={setIsEditPlanOpen}
+        />
+
+        {/* Retire / restore confirmation - there is no delete for plans. */}
+        <ConfirmModal
+          open={Boolean(planToToggle)}
+          onOpenChange={(open) => {
+            if (!open) setPlanToToggle(null);
+          }}
+          title={
+            planToToggle?.active !== false
+              ? `Retire "${planToToggle?.displayName}"?`
+              : `Restore "${planToToggle?.displayName}"?`
+          }
+          description={
+            planToToggle?.active !== false
+              ? "The plan comes off the public pricing page so no new seller can buy it. Sellers already on it keep it until their period ends, and the plan is never deleted because past subscriptions name it."
+              : "The plan goes back on the public pricing page and sellers can buy it again."
+          }
+          confirmText={planToToggle?.active !== false ? "Retire Plan" : "Restore Plan"}
+          variant={planToToggle?.active !== false ? "danger" : "default"}
+          isLoading={isTogglingStatus}
+          onConfirm={handleConfirmToggle}
         />
       </SidebarInset>
     </SidebarProvider>
