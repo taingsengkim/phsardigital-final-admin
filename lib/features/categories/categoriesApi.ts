@@ -3,6 +3,11 @@ import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolk
 import type {
   CategoryRecord,
   CategoryStatus,
+  CategoryTreeResponse,
+  CategoryAttributeResponse,
+  CategoryAttributeRequest,
+  UpdateCategoryAttributeRequest,
+  CategoryAttributeSchemaResponse,
   CreateCategoryInput,
   UpdateCategoryInput,
 } from "@/lib/types/category"
@@ -10,6 +15,11 @@ import type {
 export type {
   CategoryRecord,
   CategoryStatus,
+  CategoryTreeResponse,
+  CategoryAttributeResponse,
+  CategoryAttributeRequest,
+  UpdateCategoryAttributeRequest,
+  CategoryAttributeSchemaResponse,
   CreateCategoryInput,
   UpdateCategoryInput,
 } from "@/lib/types/category"
@@ -29,28 +39,17 @@ export interface FileUploadResult {
 }
 
 function toText(value: unknown, fallback = "") {
-  if (typeof value === "string") {
-    return value
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value)
-  }
-
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
   return fallback
 }
 
 function toNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value
-  }
-
+  if (typeof value === "number" && Number.isFinite(value)) return value
   if (typeof value === "string") {
     const parsed = Number(value.replace(/,/g, ""))
-
     return Number.isFinite(parsed) ? parsed : 0
   }
-
   return 0
 }
 
@@ -58,13 +57,10 @@ function toStatus(value: unknown): CategoryStatus {
   if (typeof value === "boolean") {
     return value ? "active" : "inactive"
   }
-
   const status = toText(value, "active").toLowerCase()
-
   if (status === "active" || status === "inactive") {
     return status
   }
-
   return status || "active"
 }
 
@@ -76,12 +72,8 @@ function toStatus(value: unknown): CategoryStatus {
 export function extractFileId(response: FileUploadResult | null | undefined) {
   for (const candidate of [response?.objectName, response?.uri]) {
     const match = typeof candidate === "string" ? candidate.match(UUID_PATTERN) : null
-
-    if (match) {
-      return match[0]
-    }
+    if (match) return match[0]
   }
-
   return undefined
 }
 
@@ -98,7 +90,6 @@ function getCategoryId(value: Record<string, unknown>, index: number) {
 
 function getParentId(value: Record<string, unknown>) {
   const parent = value.parent as { uuid?: unknown; id?: unknown } | undefined
-
   return (
     toText(value.parentUuid) ||
     toText(value.parentId) ||
@@ -174,7 +165,6 @@ function getTotalPages(response: unknown) {
   const record = (response ?? {}) as Record<string, unknown>
   const page = (record.page ?? {}) as Record<string, unknown>
   const totalPages = toNumber(page.totalPages ?? record.totalPages)
-
   return totalPages > 0 ? totalPages : 1
 }
 
@@ -217,25 +207,21 @@ async function fetchAllPages(fetchWithBQ: FetchWithBQ, path: string) {
  */
 async function fetchListingCountsBySlug(fetchWithBQ: FetchWithBQ) {
   const counts: Record<string, number> = {}
-  const { items, error } = await fetchAllPages(fetchWithBQ, "/listings")
+  try {
+    const { items, error } = await fetchAllPages(fetchWithBQ, "/listings")
+    if (error) return counts
 
-  if (error) {
-    return counts
-  }
-
-  for (const item of items) {
-    const category = ((item ?? {}) as Record<string, unknown>).category as
-      | Record<string, unknown>
-      | undefined
-    const slug = toText(category?.slug)
-
-    if (!slug) {
-      continue
+    for (const item of items) {
+      const category = ((item ?? {}) as Record<string, unknown>).category as
+        | Record<string, unknown>
+        | undefined
+      const slug = toText(category?.slug)
+      if (!slug) continue
+      counts[slug] = (counts[slug] ?? 0) + 1
     }
-
-    counts[slug] = (counts[slug] ?? 0) + 1
+  } catch {
+    // best effort
   }
-
   return counts
 }
 
@@ -251,19 +237,13 @@ const CREATE_FIELDS = [
 
 const UPDATE_FIELDS = [...CREATE_FIELDS, "moveToRoot"] as const
 
-/**
- * Send only what the upstream request schema declares, and drop undefined
- * values so a PATCH never reads as "clear this field".
- */
 function buildPayload(input: Record<string, unknown>, fields: readonly string[]) {
   const payload: Record<string, unknown> = {}
-
   for (const field of fields) {
     if (input[field] !== undefined) {
       payload[field] = input[field]
     }
   }
-
   return payload
 }
 
@@ -273,11 +253,10 @@ export const categoriesApi = createApi({
     baseUrl: apiBaseUrl,
     prepareHeaders: (headers) => {
       headers.set("accept", "application/json")
-
       return headers
     },
   }),
-  tagTypes: ["Categories"],
+  tagTypes: ["Categories", "CategoryTree", "CategoryAttributes"],
   endpoints: (builder) => ({
     getCategories: builder.query<CategoryRecord[], void>({
       queryFn: async (_arg, _api, _extraOptions, fetchWithBQ) => {
@@ -292,7 +271,6 @@ export const categoriesApi = createApi({
         return {
           data: items.map((item, index) => {
             const category = normalizeCategory(item, index)
-
             return {
               ...category,
               listingsCount: category.listingsCount || counts[category.slug] || 0,
@@ -308,6 +286,24 @@ export const categoriesApi = createApi({
             ]
           : [{ type: "Categories" as const, id: "LIST" }],
     }),
+
+    getCategoryTree: builder.query<CategoryTreeResponse[], void>({
+      query: () => ({
+        url: "/categories/tree",
+        method: "GET",
+      }),
+      providesTags: [{ type: "CategoryTree", id: "TREE" }],
+    }),
+
+    getCategoryById: builder.query<CategoryRecord, string>({
+      query: (id) => ({
+        url: `/categories/${encodeURIComponent(id)}`,
+        method: "GET",
+      }),
+      transformResponse: (response: unknown) => normalizeCategory(response),
+      providesTags: (_result, _error, id) => [{ type: "Categories", id }],
+    }),
+
     createCategory: builder.mutation<CategoryRecord, CreateCategoryInput>({
       query: (body) => ({
         url: "/categories",
@@ -315,8 +311,12 @@ export const categoriesApi = createApi({
         body: buildPayload(body as unknown as Record<string, unknown>, CREATE_FIELDS),
       }),
       transformResponse: (response: unknown) => normalizeCategory(response),
-      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+      invalidatesTags: [
+        { type: "Categories", id: "LIST" },
+        { type: "CategoryTree", id: "TREE" },
+      ],
     }),
+
     updateCategory: builder.mutation<CategoryRecord, { id: string; data: UpdateCategoryInput }>({
       query: ({ id, data }) => ({
         url: `/categories/${encodeURIComponent(id)}`,
@@ -324,8 +324,13 @@ export const categoriesApi = createApi({
         body: buildPayload(data as unknown as Record<string, unknown>, UPDATE_FIELDS),
       }),
       transformResponse: (response: unknown) => normalizeCategory(response),
-      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Categories", id },
+        { type: "Categories", id: "LIST" },
+        { type: "CategoryTree", id: "TREE" },
+      ],
     }),
+
     // Upstream soft-deletes by slug, not by uuid.
     deleteCategory: builder.mutation<{ success: boolean; slug: string }, string>({
       query: (slug) => ({
@@ -333,22 +338,87 @@ export const categoriesApi = createApi({
         method: "DELETE",
       }),
       transformResponse: (_response: unknown, _meta, slug) => ({ success: true, slug }),
-      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+      invalidatesTags: [
+        { type: "Categories", id: "LIST" },
+        { type: "CategoryTree", id: "TREE" },
+      ],
     }),
+
     removeCategoryIcon: builder.mutation<CategoryRecord, string>({
       query: (uuid) => ({
         url: `/categories/${encodeURIComponent(uuid)}/icon`,
         method: "DELETE",
       }),
       transformResponse: (response: unknown) => normalizeCategory(response),
-      invalidatesTags: [{ type: "Categories", id: "LIST" }],
+      invalidatesTags: (_result, _error, uuid) => [
+        { type: "Categories", id: uuid },
+        { type: "Categories", id: "LIST" },
+        { type: "CategoryTree", id: "TREE" },
+      ],
     }),
+
     uploadCategoryIcon: builder.mutation<FileUploadResult, FormData>({
       query: (formData) => ({
         url: "/files/upload",
         method: "POST",
         body: formData,
       }),
+    }),
+
+    // Category Attributes / Specification Schema
+    getCategoryAttributes: builder.query<
+      CategoryAttributeSchemaResponse,
+      { uuid: string; includeInherited?: boolean }
+    >({
+      query: ({ uuid, includeInherited = true }) => ({
+        url: `/categories/${encodeURIComponent(uuid)}/attributes?includeInherited=${includeInherited}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, { uuid }) => [
+        { type: "CategoryAttributes", id: uuid },
+      ],
+    }),
+
+    createCategoryAttributes: builder.mutation<
+      CategoryAttributeResponse[],
+      { uuid: string; attributes: CategoryAttributeRequest[] }
+    >({
+      query: ({ uuid, attributes }) => ({
+        url: `/categories/${encodeURIComponent(uuid)}/attributes`,
+        method: "POST",
+        body: attributes,
+      }),
+      invalidatesTags: (_result, _error, { uuid }) => [
+        { type: "CategoryAttributes", id: uuid },
+      ],
+    }),
+
+    updateCategoryAttribute: builder.mutation<
+      CategoryAttributeResponse,
+      { uuid: string; attributeUuid: string; data: UpdateCategoryAttributeRequest }
+    >({
+      query: ({ uuid, attributeUuid, data }) => ({
+        url: `/categories/${encodeURIComponent(uuid)}/attributes/${encodeURIComponent(attributeUuid)}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { uuid }) => [
+        { type: "CategoryAttributes", id: uuid },
+      ],
+    }),
+
+    deleteCategoryAttribute: builder.mutation<
+      { success: boolean },
+      { uuid: string; attributeUuid: string }
+    >({
+      query: ({ uuid, attributeUuid }) => ({
+        url: `/categories/${encodeURIComponent(uuid)}/attributes/${encodeURIComponent(attributeUuid)}`,
+        method: "DELETE",
+      }),
+      transformResponse: () => ({ success: true }),
+      invalidatesTags: (_result, _error, { uuid }) => [
+        { type: "CategoryAttributes", id: uuid },
+      ],
     }),
   }),
 })
@@ -357,9 +427,15 @@ export { normalizeCategory, normalizeCategoryList }
 
 export const {
   useGetCategoriesQuery,
+  useGetCategoryTreeQuery,
+  useGetCategoryByIdQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
   useRemoveCategoryIconMutation,
   useUploadCategoryIconMutation,
+  useGetCategoryAttributesQuery,
+  useCreateCategoryAttributesMutation,
+  useUpdateCategoryAttributeMutation,
+  useDeleteCategoryAttributeMutation,
 } = categoriesApi

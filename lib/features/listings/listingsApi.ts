@@ -257,6 +257,19 @@ export const listingsApi = createApi({
       providesTags: [{ type: "Listings", id: "COUNTS" }],
     }),
 
+    createListing: builder.mutation<ListingRecord, Record<string, unknown>>({
+      query: (body) => ({
+        url: "/listings",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => normalizeListing(response),
+      invalidatesTags: [
+        { type: "Listings", id: "LIST" },
+        { type: "Listings", id: "COUNTS" },
+      ],
+    }),
+
     updateListingStatus: builder.mutation<ListingRecord, { id: string; status: string }>({
       query: ({ id, status }) => ({
         url: `/listings/${encodeURIComponent(id)}`,
@@ -300,6 +313,7 @@ export const listingsApi = createApi({
 export const {
   useGetListingsQuery,
   useGetListingStatusCountsQuery,
+  useCreateListingMutation,
   useUpdateListingStatusMutation,
   useSuspendListingMutation,
   useRestoreListingMutation,

@@ -17,6 +17,7 @@ interface AddCategoryModalProps {
   isOpen: boolean
   onClose: () => void
   categoryToEdit?: CategoryRecord | null
+  presetParentUuid?: string | null
   availableCategories?: CategoryRecord[]
   isSubmitting?: boolean
   onSubmit: (payload: CategoryFormPayload, editId?: string) => Promise<unknown>
@@ -32,12 +33,10 @@ const initialFormState: CategoryFormPayload = {
   iconFileId: undefined,
 }
 
-// Mirrors the maxLength constraints on CategoryRequest upstream.
 const NAME_MAX_LENGTH = 100
 const SLUG_MAX_LENGTH = 150
 const DESCRIPTION_MAX_LENGTH = 1000
 
-/** Upstream validates slugs against ^[a-z0-9]+(?:-[a-z0-9]+)*$. */
 const slugify = (value: string) =>
   value
     .trim()
@@ -47,17 +46,12 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, SLUG_MAX_LENGTH)
 
-/**
- * A category cannot be reparented under itself or one of its own descendants,
- * so drop that whole subtree from the parent options.
- */
 function collectExcludedIds(categories: CategoryRecord[], rootId: string) {
   const excluded = new Set<string>([rootId])
   let grew = true
 
   while (grew) {
     grew = false
-
     for (const category of categories) {
       if (!excluded.has(category.id) && category.parentId && excluded.has(category.parentId)) {
         excluded.add(category.id)
@@ -73,6 +67,7 @@ export function AddCategoryModal({
   isOpen,
   onClose,
   categoryToEdit,
+  presetParentUuid,
   availableCategories = [],
   isSubmitting = false,
   onSubmit,
@@ -92,9 +87,7 @@ export function AddCategoryModal({
     if (!categoryToEdit) {
       return availableCategories
     }
-
     const excluded = collectExcludedIds(availableCategories, categoryToEdit.id)
-
     return availableCategories.filter((category) => !excluded.has(category.id))
   }, [availableCategories, categoryToEdit])
 
@@ -111,22 +104,35 @@ export function AddCategoryModal({
       })
       setIconPreview(categoryToEdit.iconUrl || null)
     } else if (isOpen) {
-      setFormState(initialFormState)
+      setFormState({
+        ...initialFormState,
+        parentUuid: presetParentUuid || undefined,
+      })
       setIconPreview(null)
     }
     setIconCleared(false)
     setUploadError(null)
-  }, [isOpen, categoryToEdit])
+  }, [isOpen, categoryToEdit, presetParentUuid])
 
   if (!isOpen) return null
+
+  const handleNameChange = (val: string) => {
+    setFormState((prev) => {
+      // Auto-update slug if it wasn't manually customized or was matching old slug
+      const shouldAutoSlug = !isEditing || !prev.slug
+      return {
+        ...prev,
+        name: val,
+        slug: shouldAutoSlug ? slugify(val) : prev.slug,
+      }
+    })
+  }
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
     setUploadError(null)
-
-    // Set client-side preview
     const previewUrl = URL.createObjectURL(file)
     setIconPreview(previewUrl)
     setIconCleared(false)
@@ -154,7 +160,6 @@ export function AddCategoryModal({
   const handleRemoveIcon = () => {
     setIconPreview(null)
     setFormState((prev) => ({ ...prev, iconFileId: undefined }))
-    // Only an existing, saved icon needs to be cleared upstream on save.
     setIconCleared(Boolean(categoryToEdit?.iconUrl))
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -165,14 +170,12 @@ export function AddCategoryModal({
     event.preventDefault()
 
     const trimmedName = formState.name.trim()
-
     if (trimmedName.length < 2) {
       setUploadError("Category name must be at least 2 characters.")
       return
     }
 
     const slug = slugify(formState.slug || trimmedName)
-
     if (!slug) {
       setUploadError("Slug must contain at least one letter or number.")
       return
@@ -188,7 +191,6 @@ export function AddCategoryModal({
       iconFileId: formState.iconFileId,
     }
 
-    // PATCH ignores an omitted parentUuid, so clearing a parent needs moveToRoot.
     if (isEditing && !payload.parentUuid && categoryToEdit?.parentId) {
       payload.moveToRoot = true
     }
@@ -204,14 +206,14 @@ export function AddCategoryModal({
       setIconCleared(false)
       onClose()
     } catch {
-      // error is handled by parent component state
+      // error handled in parent
     }
   }
 
   const isBusy = isSubmitting || isUploading || isRemovingIcon
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
@@ -219,15 +221,15 @@ export function AddCategoryModal({
         {/* Modal Header */}
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-[#f8f7ff] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="size-10 bg-purple-100 text-[#6338f6] rounded-2xl flex items-center justify-center shadow-sm">
+            <div className="size-10 bg-purple-100 text-[#6338f6] rounded-2xl flex items-center justify-center shadow-xs">
               {isEditing ? <PencilIcon size={20} /> : <FolderPlusIcon size={20} />}
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                {isEditing ? `Edit Category: ${categoryToEdit?.name}` : "Add New Category"}
+                {isEditing ? `Edit Category: ${categoryToEdit?.name}` : "Add Category"}
               </h3>
               <p className="text-xs text-gray-500 font-medium">
-                {isEditing ? "Modify category details and update icon" : "Create a new category or subcategory for your directory"}
+                {isEditing ? "Modify category details and icon" : "Create a new category or subcategory"}
               </p>
             </div>
           </div>
@@ -246,8 +248,8 @@ export function AddCategoryModal({
             <label className="text-xs font-bold text-gray-700 mb-1.5 block">Category Name *</label>
             <Input
               value={formState.name}
-              onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))}
-              placeholder="e.g. Electronics, Vehicles, Real Estate..."
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g. Electronics, Smart Watches, SUVs..."
               required
               minLength={2}
               maxLength={NAME_MAX_LENGTH}
@@ -270,7 +272,7 @@ export function AddCategoryModal({
             {iconPreview ? (
               <div className="flex items-center justify-between p-3 rounded-2xl border border-purple-200 bg-purple-50/50">
                 <div className="flex items-center gap-3">
-                  <div className="size-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden p-1 shadow-sm">
+                  <div className="size-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden p-1 shadow-xs">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={iconPreview} alt="Category Icon Preview" className="size-full object-contain" />
                   </div>
@@ -308,7 +310,7 @@ export function AddCategoryModal({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-700 group-hover:text-[#6338f6] transition-colors">
-                    Click to upload category icon photo
+                    Click to upload category icon
                   </p>
                   <p className="text-[10px] text-gray-400">PNG, JPG, SVG or WEBP (max 5MB)</p>
                 </div>
@@ -328,29 +330,29 @@ export function AddCategoryModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-gray-700 mb-1.5 block">URL Slug (Optional)</label>
+              <label className="text-xs font-bold text-gray-700 mb-1.5 block">URL Slug</label>
               <Input
                 value={formState.slug}
-                onChange={(event) => setFormState((current) => ({ ...current, slug: event.target.value }))}
-                onBlur={(event) =>
-                  setFormState((current) => ({ ...current, slug: slugify(event.target.value) }))
+                onChange={(e) => setFormState((cur) => ({ ...cur, slug: e.target.value }))}
+                onBlur={(e) =>
+                  setFormState((cur) => ({ ...cur, slug: slugify(e.target.value) }))
                 }
                 placeholder="auto-generated-slug"
                 maxLength={SLUG_MAX_LENGTH}
-                className="rounded-xl h-11 border-gray-200"
+                className="rounded-xl h-11 font-mono text-xs border-gray-200"
               />
             </div>
             <div>
               <label className="text-xs font-bold text-gray-700 mb-1.5 block">Parent Category</label>
               <select
                 value={formState.parentUuid ?? ""}
-                onChange={(event) => setFormState((current) => ({ ...current, parentUuid: event.target.value || undefined }))}
-                className="w-full h-11 rounded-xl border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6338f6] font-medium"
+                onChange={(e) => setFormState((cur) => ({ ...cur, parentUuid: e.target.value || undefined }))}
+                className="w-full h-11 rounded-xl border border-gray-200 bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#6338f6] font-semibold text-gray-800"
               >
-                <option value="">None (Top-Level)</option>
+                <option value="">None (Top-Level Root)</option>
                 {parentOptions.map((cat) => (
                   <option key={cat.id} value={cat.id}>
-                    {cat.name}
+                    {cat.name} (Level {cat.level})
                   </option>
                 ))}
               </select>
@@ -363,10 +365,10 @@ export function AddCategoryModal({
               type="number"
               min={0}
               value={formState.sortOrder ?? 0}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  sortOrder: Math.max(0, Number(event.target.value) || 0),
+              onChange={(e) =>
+                setFormState((cur) => ({
+                  ...cur,
+                  sortOrder: Math.max(0, Number(e.target.value) || 0),
                 }))
               }
               className="rounded-xl h-11 border-gray-200"
@@ -377,22 +379,22 @@ export function AddCategoryModal({
             <label className="text-xs font-bold text-gray-700 mb-1.5 block">Description</label>
             <Textarea
               value={formState.description}
-              onChange={(event) => setFormState((current) => ({ ...current, description: event.target.value }))}
-              placeholder="Brief description of products in this category..."
+              onChange={(e) => setFormState((cur) => ({ ...cur, description: e.target.value }))}
+              placeholder="Brief description of items and products belonging to this category..."
               maxLength={DESCRIPTION_MAX_LENGTH}
-              className="rounded-xl min-h-20 text-sm border-gray-200"
+              className="rounded-xl min-h-20 text-xs border-gray-200"
             />
           </div>
 
           <label className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3 cursor-pointer hover:bg-gray-50/50 transition-colors">
             <div>
-              <p className="text-sm font-bold text-gray-900">Active Status</p>
-              <p className="text-xs text-gray-500">Make this category visible in marketplace</p>
+              <p className="text-xs font-bold text-gray-900">Active Status</p>
+              <p className="text-[11px] text-gray-500">Make this category visible in the marketplace</p>
             </div>
             <input
               type="checkbox"
               checked={formState.isActive}
-              onChange={(event) => setFormState((current) => ({ ...current, isActive: event.target.checked }))}
+              onChange={(e) => setFormState((cur) => ({ ...cur, isActive: e.target.checked }))}
               className="size-4 rounded border-gray-300 text-[#6338f6] focus:ring-[#6338f6]"
             />
           </label>
@@ -403,14 +405,14 @@ export function AddCategoryModal({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="rounded-xl h-11 px-5 font-bold border-gray-200 hover:bg-gray-50"
+              className="rounded-xl h-11 px-5 font-bold border-gray-200 text-xs hover:bg-gray-50"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isBusy || !formState.name.trim()}
-              className="bg-[#6338f6] hover:bg-[#532edb] text-white rounded-xl h-11 px-6 font-bold flex items-center gap-2 shadow-md shadow-purple-500/20"
+              className="bg-[#6338f6] hover:bg-[#532edb] text-white rounded-xl h-11 px-6 text-xs font-bold flex items-center gap-2 shadow-md shadow-purple-500/20"
             >
               {isBusy ? (
                 <Loader2Icon size={16} className="animate-spin" />

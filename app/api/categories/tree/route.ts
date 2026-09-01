@@ -3,25 +3,21 @@ import { getAuthHeader, requireAdmin } from "@/lib/auth";
 
 const BASE_URL = process.env.UPSTREAM_API_URL ?? "https://phsardigital.quizzy.it.com/api/v1";
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest) {
   const denied = await requireAdmin(request);
   if (denied) return denied;
 
   try {
-    const { id } = await params;
     const authHeaders = await getAuthHeader(request);
 
-    const upstreamRes = await fetch(`${BASE_URL}/categories/${encodeURIComponent(id)}/icon`, {
-      method: "DELETE",
+    const upstreamRes = await fetch(`${BASE_URL}/categories/tree`, {
+      method: "GET",
       headers: {
         Accept: "application/json",
         ...authHeaders,
       },
+      cache: "no-store",
     });
-
-    if (upstreamRes.status === 204) {
-      return new NextResponse(null, { status: 204 });
-    }
 
     const text = await upstreamRes.text();
     let data: unknown = null;
@@ -39,14 +35,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         return NextResponse.json(data, { status: upstreamRes.status });
       }
       return NextResponse.json(
-        { message: "Failed to remove category icon" },
+        { message: "Failed to fetch category tree" },
         { status: upstreamRes.status },
       );
     }
 
-    return NextResponse.json(data ?? { success: true }, { status: upstreamRes.status });
+    return NextResponse.json(data, { status: upstreamRes.status });
   } catch (err: unknown) {
-    console.error("DELETE Category icon error:", err);
+    console.error("GET Category Tree error:", err);
     return NextResponse.json(
       { message: err instanceof Error ? err.message : "Service unavailable." },
       { status: 502 },
