@@ -43,7 +43,9 @@ function initDatabase() {
         "image" text,
         "createdAt" date not null,
         "updatedAt" date not null,
-        "roles" text default ''
+        "roles" text default '',
+        "accessToken" text default '',
+        "idToken" text default ''
       );
       CREATE TABLE IF NOT EXISTS "session" (
         "id" text not null primary key,
@@ -79,6 +81,17 @@ function initDatabase() {
         "updatedAt" date not null
       );
     `);
+
+    // Ensure columns exist on existing databases
+    try {
+      database.exec(`ALTER TABLE "user" ADD COLUMN "roles" text default ''`);
+    } catch {}
+    try {
+      database.exec(`ALTER TABLE "user" ADD COLUMN "accessToken" text default ''`);
+    } catch {}
+    try {
+      database.exec(`ALTER TABLE "user" ADD COLUMN "idToken" text default ''`);
+    } catch {}
   } catch (err) {
     console.error("Database schema init error:", err);
   }
@@ -315,9 +328,25 @@ export async function getAuthHeader(request: Request): Promise<Record<string, st
 
   try {
     const session = await getServerSession(request.headers);
-    const user = session?.user as (User & { accessToken?: string }) | undefined;
+    const user = session?.user as (User & { accessToken?: string; id?: string }) | undefined;
+    
     if (user?.accessToken) {
       return { Authorization: `Bearer ${user.accessToken}` };
+    }
+
+    if (user?.id) {
+      try {
+        const row = db
+          .prepare(
+            "select accessToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+          )
+          .get(user.id) as { accessToken: string | null } | undefined;
+        if (row?.accessToken) {
+          return { Authorization: `Bearer ${row.accessToken}` };
+        }
+      } catch {
+        // fallback
+      }
     }
 
     const token = await auth.api.getAccessToken({
@@ -325,7 +354,7 @@ export async function getAuthHeader(request: Request): Promise<Record<string, st
       body: { providerId: "keycloak" },
     });
 
-    if (token.accessToken) {
+    if (token?.accessToken) {
       return { Authorization: `Bearer ${token.accessToken}` };
     }
   } catch (err) {
