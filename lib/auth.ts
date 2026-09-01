@@ -145,6 +145,12 @@ const currentBaseUrl = getBaseUrl();
 export const auth = betterAuth({
   database: db,
   baseURL: currentBaseUrl,
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    },
+  },
   trustedOrigins: [
     "http://localhost:3000",
     "https://phsardigital-final-admin.vercel.app",

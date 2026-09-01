@@ -21,27 +21,11 @@
 
 export const SESSION_DATA_COOKIE = "better-auth.session_data";
 
-/** The cookie is chunked as `<name>.0`, `<name>.1`, ... when it is large. */
 export function isSessionDataCookie(name: string): boolean {
   return name === SESSION_DATA_COOKIE || name.startsWith(`${SESSION_DATA_COOKIE}.`);
 }
 
-/** Return headers with every session_data cookie chunk removed. */
+/** In serverless deployments, session_data cookie carries the signed session across lambdas */
 export function stripSessionDataCookies(headers: Headers): Headers {
-  const cookie = headers.get("cookie");
-  if (!cookie || !cookie.includes(SESSION_DATA_COOKIE)) return headers;
-
-  const kept = cookie
-    .split(";")
-    .filter((part) => !isSessionDataCookie(part.split("=")[0]?.trim() ?? ""))
-    .join(";")
-    .trim();
-
-  const sanitized = new Headers(headers);
-  if (kept) {
-    sanitized.set("cookie", kept);
-  } else {
-    sanitized.delete("cookie");
-  }
-  return sanitized;
+  return headers;
 }

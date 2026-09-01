@@ -9,9 +9,11 @@ import { ShieldIcon, KeyIcon } from "lucide-react";
 export default function LoginPage() {
   const hasStartedLogin = useRef(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     setLoginError(null);
+    setIsLoading(true);
 
     try {
       const result = await signIn.oauth2({
@@ -26,17 +28,27 @@ export default function LoginPage() {
 
       if (result?.error) {
         setLoginError(result.error.message || "Unable to connect to Keycloak.");
+        setIsLoading(false);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unable to connect to Keycloak.";
       console.error("Keycloak login error:", err);
       setLoginError(message);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (hasStartedLogin.current) return;
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const err = urlParams.get("error") || urlParams.get("error_description");
+      if (err) {
+        setLoginError(`Login failed: ${err}`);
+        return;
+      }
+    }
 
+    if (hasStartedLogin.current) return;
     hasStartedLogin.current = true;
     void handleLogin();
   }, []);

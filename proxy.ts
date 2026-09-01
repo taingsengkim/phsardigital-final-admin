@@ -12,53 +12,35 @@ type Session = typeof auth.$Infer.Session;
  * parses it on every request but only clears it when it parses successfully,
  * so an unparseable one logs an error forever unless we delete it ourselves.
  */
-function dropStaleSessionData(request: NextRequest, response: NextResponse) {
-  for (const cookie of request.cookies.getAll()) {
-    if (isSessionDataCookie(cookie.name)) {
-      response.cookies.delete(cookie.name);
-    }
-  }
-  return response;
-}
-
-/**
- * Optimistic access check only. The Next.js docs are explicit that Proxy must
- * not be the authorization solution, so the real gate lives in
- * `app/dashboard/layout.tsx` and in `requireAdmin()` on the route handlers.
- * This just avoids rendering a dashboard shell the user cannot use.
- */
 export async function proxy(request: NextRequest) {
   const { data: session } = await betterFetch<Session>(
     "/api/auth/get-session",
     {
       baseURL: request.nextUrl.origin,
-      headers: stripSessionDataCookies(request.headers),
+      headers: request.headers,
     },
   );
 
   const admin = isAdmin(session?.user);
   const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
   const isLoginPage = request.nextUrl.pathname === "/login";
-  const to = (path: string) =>
-    dropStaleSessionData(request, NextResponse.redirect(new URL(path, request.url)));
 
   if (isDashboard) {
-    if (!session) return to("/login");
-    if (!admin) return to("/forbidden");
+    if (!session) return NextResponse.redirect(new URL("/login", request.url));
+    if (!admin) return NextResponse.redirect(new URL("/forbidden", request.url));
   }
 
-  // Signed in but not an admin: send them to the denial page rather than
-  // bouncing them into /dashboard only to be rejected there.
+  // Signed in: redirect away from login page
   if (isLoginPage && session) {
-    return to(admin ? "/dashboard" : "/forbidden");
+    return NextResponse.redirect(new URL(admin ? "/dashboard" : "/forbidden", request.url));
   }
 
   if (request.nextUrl.pathname === "/") {
-    if (!session) return to("/login");
-    return to(admin ? "/dashboard" : "/forbidden");
+    if (!session) return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL(admin ? "/dashboard" : "/forbidden", request.url));
   }
 
-  return dropStaleSessionData(request, NextResponse.next());
+  return NextResponse.next();
 }
 
 export const config = {
