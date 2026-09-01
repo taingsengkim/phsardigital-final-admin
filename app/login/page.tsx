@@ -7,12 +7,13 @@ import Image from "next/image";
 import { ShieldIcon, KeyIcon } from "lucide-react";
 
 export default function LoginPage() {
-  const hasStartedLogin = useRef(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loggedOutMessage, setLoggedOutMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     setLoginError(null);
+    setLoggedOutMessage(null);
     setIsLoading(true);
 
     try {
@@ -41,16 +42,16 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("logged_out")) {
+        setLoggedOutMessage("You have been signed out. Please sign in with an administrator account.");
+        return;
+      }
       const err = urlParams.get("error") || urlParams.get("error_description");
       if (err) {
         setLoginError(`Login failed: ${err}`);
         return;
       }
     }
-
-    if (hasStartedLogin.current) return;
-    hasStartedLogin.current = true;
-    void handleLogin();
   }, []);
 
   return (
@@ -90,13 +91,19 @@ export default function LoginPage() {
             
             <Button 
               onClick={handleLogin}
-              className="w-full h-14 bg-[#6338f6] hover:bg-[#532edb] text-white rounded-xl font-bold text-base transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 group"
+              disabled={isLoading}
+              className="w-full h-14 bg-[#6338f6] hover:bg-[#532edb] text-white rounded-xl font-bold text-base transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-70"
             >
-              <KeyIcon size={18} className="group-hover:rotate-12 transition-transform" />
-              Sign in with Keycloak
+              <KeyIcon size={18} className={`transition-transform ${isLoading ? "animate-spin" : "group-hover:rotate-12"}`} />
+              {isLoading ? "Connecting to Keycloak..." : "Sign in with Keycloak"}
             </Button>
+            {loggedOutMessage && (
+              <p className="mt-3 text-center text-sm font-medium text-emerald-600 bg-emerald-50 py-2 px-3 rounded-lg border border-emerald-200">
+                {loggedOutMessage}
+              </p>
+            )}
             {loginError && (
-              <p className="mt-3 text-center text-sm font-medium text-red-600">
+              <p className="mt-3 text-center text-sm font-medium text-red-600 bg-red-50 py-2 px-3 rounded-lg border border-red-200">
                 {loginError}
               </p>
             )}
