@@ -13,13 +13,28 @@ type Session = typeof auth.$Infer.Session;
  * so an unparseable one logs an error forever unless we delete it ourselves.
  */
 export async function proxy(request: NextRequest) {
-  const { data: session } = await betterFetch<Session>(
-    "/api/auth/get-session",
-    {
+  const cookie = request.headers.get("cookie") || "";
+  if (!cookie) {
+    if (request.nextUrl.pathname.startsWith("/dashboard")) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  let session: Session | null = null;
+  try {
+    const res = await betterFetch<Session>("/api/auth/get-session", {
       baseURL: request.nextUrl.origin,
-      headers: request.headers,
-    },
-  );
+      headers: {
+        cookie,
+      },
+    });
+    session = res.data ?? null;
+  } catch (err) {
+    // If internal fetch fails during edge middleware, let the request proceed
+    // to the page layout where getServerSession handles the authoritative check.
+    return NextResponse.next();
+  }
 
   const admin = isAdmin(session?.user);
   const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");

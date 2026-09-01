@@ -145,6 +145,10 @@ const currentBaseUrl = getBaseUrl();
 export const auth = betterAuth({
   database: db,
   baseURL: currentBaseUrl,
+  secret:
+    process.env.BETTER_AUTH_SECRET ||
+    process.env.AUTH_SECRET ||
+    "pWGg2GuYg9Xgc6GnGwBONAUmnhyyOqio6+qwFymZfgQ=",
   session: {
     cookieCache: {
       enabled: true,
