@@ -9,6 +9,7 @@ import {
   type ListingRecord,
   type ListingStatusCounts,
 } from "@/lib/types/listing"
+import { formatMediaUrl } from "@/lib/media-url"
 
 export type {
   ListingPage,
@@ -71,7 +72,7 @@ function normalizeListing(value: unknown, index = 0): ListingRecord {
     status: toText(record.status, "DRAFT"),
     sellerId: toText(seller.sellerId) || null,
     sellerName: toText(seller.businessName) || "Unknown seller",
-    sellerLogoUrl: toText(seller.logoUri) || null,
+    sellerLogoUrl: formatMediaUrl(toText(seller.logoUri) || null),
     categoryName: toText(category.name) || "Uncategorized",
     categorySlug: toText(category.slug),
     fullPrice: toNumber(record.fullPrice),
@@ -79,7 +80,7 @@ function normalizeListing(value: unknown, index = 0): ListingRecord {
     stockQty: toNumber(record.stockQty),
     sold: toNumber(record.sold),
     isFeatured: Boolean(record.isFeatured),
-    imageUrl: toText(thumbnail.uri) || toText(firstImage.uri) || null,
+    imageUrl: formatMediaUrl(toText(thumbnail.uri) || toText(firstImage.uri) || null),
     createdAt: toText(record.createdAt) || null,
     lastModifiedAt: toText(record.lastModifiedAt) || null,
     averageRating: toOptionalNumber(record.averageRating),

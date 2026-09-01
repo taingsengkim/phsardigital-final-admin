@@ -11,6 +11,7 @@ import type {
   CreateCategoryInput,
   UpdateCategoryInput,
 } from "@/lib/types/category"
+import { formatMediaUrl } from "@/lib/media-url"
 
 export type {
   CategoryRecord,
@@ -137,7 +138,13 @@ function normalizeCategory(value: unknown, index = 0): CategoryRecord {
     updatedAt:
       toText(record.updatedAt) || toText(record.lastModifiedAt) || toText(record.updated_at) || null,
     iconName: getIconName(record),
-    iconUrl: toText(record.iconUrl) || toText(record.icon_url) || toText(record.icon) || null,
+    iconUrl: formatMediaUrl(
+      toText(record.iconUrl) ||
+        toText(record.icon_url) ||
+        toText(record.icon) ||
+        toText((record.iconUri as any)?.uri) ||
+        null
+    ),
     iconFileId: toText(record.iconFileId) || toText(record.icon_file_id) || null,
     children: nestedChildren,
   }
@@ -292,6 +299,29 @@ export const categoriesApi = createApi({
         url: "/categories/tree",
         method: "GET",
       }),
+      transformResponse: (response: unknown) => {
+        const normalizeTreeNode = (node: unknown): CategoryTreeResponse => {
+          const n = (node ?? {}) as Record<string, unknown>;
+          const icon = (n.iconUri ?? {}) as Record<string, unknown>;
+          const children = Array.isArray(n.children) ? n.children.map(normalizeTreeNode) : [];
+          return {
+            uuid: toText(n.uuid) || toText(n.id),
+            name: toText(n.name),
+            slug: toText(n.slug),
+            description: toText(n.description) || null,
+            level: toNumber(n.level),
+            iconUrl: formatMediaUrl(
+              toText(n.iconUrl) ||
+                toText(n.icon_url) ||
+                toText(n.icon) ||
+                toText(icon.uri) ||
+                null
+            ),
+            children,
+          };
+        };
+        return Array.isArray(response) ? response.map(normalizeTreeNode) : [];
+      },
       providesTags: [{ type: "CategoryTree", id: "TREE" }],
     }),
 

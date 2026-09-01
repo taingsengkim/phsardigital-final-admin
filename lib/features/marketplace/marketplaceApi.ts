@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
+import { formatMediaUrl } from "@/lib/media-url"
 
 export type AccountStatus = "active" | "suspended" | "banned" | "pending" | string
 
@@ -100,7 +101,7 @@ function normalizeBuyer(value: unknown, index = 0): BuyerRecord {
     joinTime: toText(record.joinTime) || null,
     totalOrders: toNumber(record.totalOrders ?? record.ordersCount ?? record.orderCount),
     totalSpent: toText(record.totalSpent) || `$${toNumber(record.totalSpentAmount ?? record.spentAmount).toFixed(2)}`,
-    avatar: toText(record.avatar) || toText(record.avatarUrl) || null,
+    avatar: formatMediaUrl(toText(record.avatar) || toText(record.avatarUrl) || null),
     selected: Boolean(record.selected),
   }
 }
@@ -135,7 +136,7 @@ function normalizeSeller(value: unknown, index = 0): SellerRecord {
     reviews: typeof record.reviews === "number" ? record.reviews : record.reviews ? toNumber(record.reviews) : null,
     sales: toText(record.sales) || toText(record.totalSales) || "$0.00",
     status: normalizeSellerStatus(record.status ?? record.state ?? record.isActive),
-    avatar: toText(record.avatar) || toText(record.avatarUrl) || null,
+    avatar: formatMediaUrl(toText(record.avatar) || toText(record.avatarUrl) || null),
     selected: Boolean(record.selected),
   }
 }
@@ -190,7 +191,13 @@ function normalizeListing(value: unknown, index = 0): ListingRecord {
       toText(record.updatedAt) ||
       "Unknown",
     live: Boolean(record.live ?? record.isLive ?? record.published ?? record.active),
-    imageUrl: toText(record.imageUrl) || toText(record.image) || toText(record.thumbnail) || toText(record.coverImage) || null,
+    imageUrl: formatMediaUrl(
+      toText(record.imageUrl) ||
+        toText(record.image) ||
+        toText(record.thumbnail) ||
+        toText(record.coverImage) ||
+        null
+    ),
     description: toText(record.description) || toText(record.details) || toText(record.summary) || "No description provided.",
   }
 }
