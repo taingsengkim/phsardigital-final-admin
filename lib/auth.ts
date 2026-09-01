@@ -3,13 +3,90 @@ import type { User } from "better-auth";
 import { genericOAuth } from "better-auth/plugins";
 import Database from "better-sqlite3";
 import { NextResponse } from "next/server";
+import fs from "fs";
 import path from "path";
 
 import { isAdmin, serializeRoles } from "@/lib/roles";
 import { stripSessionDataCookies } from "@/lib/session-cookies";
 
-// Initialize a local SQLite database for session storage
-const db = new Database(path.join(process.cwd(), ".better-auth.db"));
+// Initialize a local SQLite database for session storage, using /tmp on Vercel
+function initDatabase() {
+  const isServerless = Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    (process.env.NODE_ENV === "production" && !process.env.IS_LOCAL)
+  );
+
+  let dbFile = path.join(process.cwd(), ".better-auth.db");
+
+  if (isServerless) {
+    const tmpDb = path.join("/tmp", ".better-auth.db");
+    if (!fs.existsSync(tmpDb) && fs.existsSync(dbFile)) {
+      try {
+        fs.copyFileSync(dbFile, tmpDb);
+      } catch (e) {
+        console.warn("Could not copy initial .better-auth.db to /tmp:", e);
+      }
+    }
+    dbFile = tmpDb;
+  }
+
+  const database = new Database(dbFile);
+
+  try {
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS "user" (
+        "id" text not null primary key,
+        "name" text not null,
+        "email" text not null unique,
+        "emailVerified" integer not null,
+        "image" text,
+        "createdAt" date not null,
+        "updatedAt" date not null,
+        "roles" text default ''
+      );
+      CREATE TABLE IF NOT EXISTS "session" (
+        "id" text not null primary key,
+        "expiresAt" date not null,
+        "token" text not null unique,
+        "createdAt" date not null,
+        "updatedAt" date not null,
+        "ipAddress" text,
+        "userAgent" text,
+        "userId" text not null references "user" ("id") on delete cascade
+      );
+      CREATE TABLE IF NOT EXISTS "account" (
+        "id" text not null primary key,
+        "accountId" text not null,
+        "providerId" text not null,
+        "userId" text not null references "user" ("id") on delete cascade,
+        "accessToken" text,
+        "refreshToken" text,
+        "idToken" text,
+        "accessTokenExpiresAt" date,
+        "refreshTokenExpiresAt" date,
+        "scope" text,
+        "password" text,
+        "createdAt" date not null,
+        "updatedAt" date not null
+      );
+      CREATE TABLE IF NOT EXISTS "verification" (
+        "id" text not null primary key,
+        "identifier" text not null,
+        "value" text not null,
+        "expiresAt" date not null,
+        "createdAt" date not null,
+        "updatedAt" date not null
+      );
+    `);
+  } catch (err) {
+    console.error("Database schema init error:", err);
+  }
+
+  return database;
+}
+
+const db = initDatabase();
 
 /**
  * Read the claims out of a JWT without verifying the signature. Keycloak handed
