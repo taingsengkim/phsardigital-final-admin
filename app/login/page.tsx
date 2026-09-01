@@ -19,6 +19,11 @@ export default function LoginPage() {
         callbackURL: "/dashboard",
       });
 
+      if (result?.data?.url) {
+        window.location.href = result.data.url;
+        return;
+      }
+
       if (result?.error) {
         setLoginError(result.error.message || "Unable to connect to Keycloak.");
       }
