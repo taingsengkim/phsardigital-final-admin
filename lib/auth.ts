@@ -115,16 +115,36 @@ function extractRealmRoles(claims: Record<string, unknown>): string[] {
   );
 }
 
+function getBaseUrl(): string {
+  const isServerless = Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    (process.env.NODE_ENV === "production" && !process.env.IS_LOCAL)
+  );
+
+  const envUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
+
+  if (isServerless) {
+    // If envUrl is missing or accidentally set to localhost in Vercel environment variables, override it
+    if (!envUrl || envUrl.includes("localhost") || envUrl.includes("127.0.0.1")) {
+      if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+        return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+      }
+      if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL}`;
+      }
+      return "https://phsardigital-final-admin.vercel.app";
+    }
+  }
+
+  return envUrl || "http://localhost:3000";
+}
+
+const currentBaseUrl = getBaseUrl();
+
 export const auth = betterAuth({
   database: db,
-  baseURL:
-    process.env.BETTER_AUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000"),
+  baseURL: currentBaseUrl,
   trustedOrigins: [
     "http://localhost:3000",
     "https://phsardigital-final-admin.vercel.app",
@@ -153,6 +173,7 @@ export const auth = betterAuth({
           clientId: process.env.KEYCLOAK_CLIENT_ID || "",
           clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "",
           discoveryUrl: `${process.env.KEYCLOAK_ISSUER}/.well-known/openid-configuration`,
+          redirectURI: `${currentBaseUrl}/api/auth/oauth2/callback/keycloak`,
           scopes: ["openid", "profile", "email"],
           pkce: true,
           // Re-read the profile on every sign-in so role changes in Keycloak
