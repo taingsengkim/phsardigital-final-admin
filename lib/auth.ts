@@ -169,6 +169,18 @@ export const auth = betterAuth({
         defaultValue: "",
         input: false,
       },
+      accessToken: {
+        type: "string",
+        required: false,
+        defaultValue: "",
+        input: false,
+      },
+      idToken: {
+        type: "string",
+        required: false,
+        defaultValue: "",
+        input: false,
+      },
     },
   },
   plugins: [
@@ -211,6 +223,8 @@ export const auth = betterAuth({
               email: typeof claims.email === "string" ? claims.email : undefined,
               emailVerified: claims.email_verified === true,
               image: typeof claims.picture === "string" ? claims.picture : undefined,
+              accessToken: tokens.accessToken || "",
+              idToken: tokens.idToken || "",
               roles: serializeRoles([
                 ...extractRealmRoles(accessClaims),
                 ...extractRealmRoles(idClaims),
@@ -220,10 +234,15 @@ export const auth = betterAuth({
             return profile;
           },
           mapProfileToUser: (profile) => {
-            // Partial<User> is a weak type, so widen it to carry the extra
-            // `roles` field declared in user.additionalFields above.
-            const mapped: Partial<User> & { roles: string } = {
-              roles: typeof profile.roles === "string" ? profile.roles : "",
+            const p = profile as Record<string, unknown>;
+            const mapped: Partial<User> & {
+              roles: string;
+              accessToken?: string;
+              idToken?: string;
+            } = {
+              roles: typeof p.roles === "string" ? p.roles : "",
+              accessToken: typeof p.accessToken === "string" ? p.accessToken : "",
+              idToken: typeof p.idToken === "string" ? p.idToken : "",
             };
             return mapped;
           },
@@ -235,30 +254,33 @@ export const auth = betterAuth({
 
 /**
  * Look up the Keycloak id_token for a user so logout can send id_token_hint.
- * Without it, Keycloak 18+ renders a "Do you want to log out?" interstitial and,
- * if the user never confirms, the SSO cookie survives. The next sign-in then
- * becomes a re-authentication, where Keycloak sets usernameHidden and the login
- * theme renders a password-only form.
  */
-export function getKeycloakIdToken(userId: string): string | null {
-  const row = db
-    .prepare(
-      "select idToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
-    )
-    .get(userId) as { idToken: string | null } | undefined;
+export async function getKeycloakIdToken(userId: string, headers?: Headers): Promise<string | null> {
+  if (headers) {
+    try {
+      const session = await getServerSession(headers);
+      const user = session?.user as (User & { idToken?: string }) | undefined;
+      if (user?.idToken) return user.idToken;
+    } catch {
+      // fallback to DB
+    }
+  }
 
-  return row?.idToken ?? null;
+  try {
+    const row = db
+      .prepare(
+        "select idToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+      )
+      .get(userId) as { idToken: string | null } | undefined;
+
+    return row?.idToken ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Gate a route handler on the Keycloak ADMIN realm role.
- *
- * Returns an error `Response` to short-circuit with, or `null` when the caller
- * is an administrator and the handler should continue.
- */
-/**
- * Resolve the session, dropping the stale `better-auth.session_data` cookie
- * first. See lib/session-cookies.ts for why that cookie has to go.
  */
 export async function getServerSession(headers: Headers) {
   return auth.api.getSession({ headers: stripSessionDataCookies(headers) });
@@ -288,6 +310,12 @@ export async function getAuthHeader(request: Request): Promise<Record<string, st
   }
 
   try {
+    const session = await getServerSession(request.headers);
+    const user = session?.user as (User & { accessToken?: string }) | undefined;
+    if (user?.accessToken) {
+      return { Authorization: `Bearer ${user.accessToken}` };
+    }
+
     const token = await auth.api.getAccessToken({
       headers: request.headers,
       body: { providerId: "keycloak" },
