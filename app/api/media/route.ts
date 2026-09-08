@@ -19,13 +19,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const contentType = upstreamRes.headers.get("content-type") || "image/jpeg";
+    let contentType = upstreamRes.headers.get("content-type") || "image/jpeg";
+    if (!contentType || contentType === "application/octet-stream") {
+      const cleanUrl = targetUrl.split("?")[0].toLowerCase();
+      if (cleanUrl.endsWith(".jpg") || cleanUrl.endsWith(".jpeg")) contentType = "image/jpeg";
+      else if (cleanUrl.endsWith(".png")) contentType = "image/png";
+      else if (cleanUrl.endsWith(".webp")) contentType = "image/webp";
+      else if (cleanUrl.endsWith(".gif")) contentType = "image/gif";
+      else if (cleanUrl.endsWith(".pdf")) contentType = "application/pdf";
+      else if (cleanUrl.endsWith(".svg")) contentType = "image/svg+xml";
+    }
+
     const arrayBuffer = await upstreamRes.arrayBuffer();
 
     return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
         "Content-Type": contentType,
+        "Content-Disposition": "inline",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

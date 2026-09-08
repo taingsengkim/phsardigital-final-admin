@@ -7,6 +7,7 @@ import type {
   SellerApplicationQueryParams,
 } from "@/lib/types/seller-application"
 import { toText } from "./api-utils"
+import { formatMediaUrl } from "@/lib/media-url"
 
 function unwrapRecord(response: unknown): unknown {
   if (!response || typeof response !== "object" || Array.isArray(response)) return response
@@ -48,11 +49,17 @@ function parseDocuments(value: unknown): ApplicationDocument[] {
   if (!Array.isArray(value)) return []
   return value.map((doc, idx) => {
     const item = (doc ?? {}) as Record<string, unknown>
+    const rawUri = toText(item.uri)
+    const objectName = toText(item.objectName)
+    let uri = formatMediaUrl(rawUri) || rawUri
+    if (!uri && objectName) {
+      uri = formatMediaUrl(`http://51.79.146.203:9000/documents/${objectName}`) || ""
+    }
     return {
       uuid: toText(item.uuid) || `doc-${idx}`,
       docType: toText(item.docType) || "OTHER",
-      objectName: toText(item.objectName),
-      uri: toText(item.uri),
+      objectName,
+      uri,
     }
   })
 }
@@ -73,8 +80,10 @@ function normalizeApplication(value: unknown, index = 0): SellerApplication {
 
   const date = formatApplicationDate(record.createdAt ?? record.appliedAt ?? record.submittedAt)
 
-  const logoUri = toText(record.logoUri) || toText(record.logoObjectName) || null
-  const avatar = toText(record.avatarUrl) || toText(record.avatar) || toText(user.image) || logoUri || null
+  const rawLogo = toText(record.logoUri) || toText(record.logoObjectName) || null
+  const rawAvatar = toText(record.avatarUrl) || toText(record.avatar) || toText(user.image) || rawLogo || null
+  const logoUri = formatMediaUrl(rawLogo) || rawLogo
+  const avatar = formatMediaUrl(rawAvatar) || rawAvatar
 
   const address = toText(record.address) || toText(business.address)
   const city = toText(record.city) || toText(business.city)

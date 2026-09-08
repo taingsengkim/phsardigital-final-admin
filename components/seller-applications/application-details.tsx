@@ -39,6 +39,7 @@ import type {
   SellerApplication,
 } from "@/lib/types/seller-application";
 import { cn } from "@/lib/utils";
+import { formatMediaUrl } from "@/lib/media-url";
 
 const BACK_HREF = "/dashboard/sellers";
 
@@ -187,8 +188,16 @@ function DocumentPreviewDialog({
 }) {
   const title = document.objectName || document.docType.replaceAll("_", " ");
   const [zoom, setZoom] = useState(100);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const previewScale = zoom / 100;
-  const previewSize = Math.max(zoom, 100);
+
+  // Ensure plain HTTP / MinIO URLs are proxied over HTTPS via /api/media
+  const previewUrl = formatMediaUrl(document.uri) || document.uri;
+
+  const cleanPath = (document.objectName || document.uri).split("?")[0].toLowerCase();
+  const isImage = /\.(jpe?g|png|webp|gif|bmp|svg)$/i.test(cleanPath);
+  const isPdf = /\.pdf$/i.test(cleanPath);
 
   return (
     <div
@@ -199,7 +208,7 @@ function DocumentPreviewDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="document-preview-title"
-        className="flex h-[min(88vh,900px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl"
+        className="flex h-[min(90vh,920px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-4 py-3 sm:px-5">
@@ -215,6 +224,17 @@ function DocumentPreviewDialog({
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {previewUrl && (
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                <ExternalLinkIcon size={14} />
+                <span className="hidden sm:inline">Open in New Tab</span>
+              </a>
+            )}
             <button
               type="button"
               onClick={() => onRequestDownload(document)}
@@ -254,8 +274,8 @@ function DocumentPreviewDialog({
           </button>
           <button
             type="button"
-            onClick={() => setZoom((value) => Math.min(200, value + 25))}
-            disabled={zoom === 200}
+            onClick={() => setZoom((value) => Math.min(250, value + 25))}
+            disabled={zoom === 250}
             aria-label="Zoom in"
             className="flex size-8 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-35"
           >
@@ -266,22 +286,74 @@ function DocumentPreviewDialog({
           </span>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto bg-gray-100 p-2 sm:p-4">
-          <div
-            className="origin-top-left"
-            style={{ width: `${previewSize}%`, height: `${previewSize}%` }}
-          >
-            <iframe
-              src={document.uri}
-              title={`Preview of ${title}`}
-              className="origin-top-left rounded-xl border border-gray-200 bg-white"
-              style={{
-                width: `${100 / previewScale}%`,
-                height: `${100 / previewScale}%`,
-                transform: `scale(${previewScale})`,
-              }}
-            />
-          </div>
+        <div className="relative min-h-0 flex-1 overflow-auto bg-gray-100 p-2 sm:p-4">
+          {isImage ? (
+            <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
+              {isLoading && !hasError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-100/80 backdrop-blur-xs">
+                  <RefreshCwIcon size={24} className="animate-spin text-[#6338f6]" />
+                  <span className="text-xs font-semibold text-gray-500">Loading document image...</span>
+                </div>
+              )}
+
+              {hasError ? (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-8 text-center shadow-sm border border-gray-200 max-w-md">
+                  <AlertCircleIcon size={32} className="text-rose-500" />
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Failed to display document preview</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      The image could not be rendered directly in the previewer.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    {previewUrl && (
+                      <a
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#6338f6] px-4 py-2 text-xs font-bold text-white hover:bg-[#5228e0]"
+                      >
+                        <ExternalLinkIcon size={14} /> Open in New Tab
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onRequestDownload(document)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                    >
+                      <DownloadIcon size={14} /> Download File
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={previewUrl}
+                  alt={title}
+                  onLoad={() => setIsLoading(false)}
+                  onError={() => {
+                    setIsLoading(false);
+                    setHasError(true);
+                  }}
+                  className={cn(
+                    "max-h-[75vh] max-w-full rounded-xl object-contain shadow-sm transition-transform duration-150",
+                    isLoading && "opacity-0"
+                  )}
+                  style={{
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: "center center",
+                  }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="h-full w-full">
+              <iframe
+                src={previewUrl}
+                title={`Preview of ${title}`}
+                className="h-full w-full rounded-xl border border-gray-200 bg-white shadow-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -515,7 +587,7 @@ export function ApplicationDetails({ applicationId }: ApplicationDetailsProps) {
 
   const handleConfirmDownload = (file: ApplicationDocument) => {
     const link = window.document.createElement("a");
-    link.href = file.uri;
+    link.href = formatMediaUrl(file.uri) || file.uri;
     link.download = file.objectName || "verification-document";
     link.target = "_blank";
     link.rel = "noreferrer";
