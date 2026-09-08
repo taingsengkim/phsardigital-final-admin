@@ -27,6 +27,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  React.useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = language === "kh" ? "km" : "en"
+      if (language === "kh") {
+        document.documentElement.classList.add("font-khmer")
+      } else {
+        document.documentElement.classList.remove("font-khmer")
+      }
+    }
+  }, [language])
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     try {
