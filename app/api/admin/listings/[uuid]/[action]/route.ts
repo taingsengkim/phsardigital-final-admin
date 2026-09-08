@@ -15,7 +15,7 @@ export async function PATCH(
   try {
     const { uuid, action } = await params
 
-    if (!["suspend", "restore"].includes(action)) {
+    if (!["suspend", "remove", "restore"].includes(action)) {
       return NextResponse.json({ message: "Invalid moderation action" }, { status: 400 })
     }
 
@@ -26,7 +26,7 @@ export async function PATCH(
     }
 
     let bodyText: string | undefined
-    if (action === "suspend") {
+    if (action === "suspend" || action === "remove") {
       headers["Content-Type"] = "application/json"
       bodyText = await request.text().catch(() => "")
     }

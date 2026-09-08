@@ -7,7 +7,7 @@ const upstreamApiUrl = (process.env.UPSTREAM_API_URL ?? "https://phsardigital.qu
 export async function proxyUpstreamRequest(
   request: Request,
   path: string,
-  method: "GET" | "PATCH",
+  method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
 ) {
   const denied = await requireAdmin(request)
   if (denied) return denied
