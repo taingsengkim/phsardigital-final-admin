@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontalIcon, SearchIcon, PlusIcon, BanIcon, Edit3Icon } from "lucide-react"
+import { MoreHorizontalIcon, SearchIcon, PlusIcon, BanIcon, Edit3Icon, EyeIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import type { SellerSubscription, SubscriptionPlan } from "@/lib/types/subscription"
@@ -11,6 +11,7 @@ import {
   useCancelSellerSubscriptionMutation,
 } from "@/lib/redux/service/subscriptionApi"
 import { GrantSubscriptionModal } from "./grant-subscription-modal"
+import { SellerProfileModal } from "./seller-profile-modal"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { getApiErrorMessage } from "@/lib/redux/service/api-utils"
 import { formatMediaUrl } from "@/lib/media-url"
@@ -53,6 +54,8 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const [activeMenuSellerId, setActiveMenuSellerId] = useState<string | null>(null)
   const [selectedSubForGrant, setSelectedSubForGrant] = useState<SellerSubscription | null>(null)
   const [isGrantOpen, setIsGrantOpen] = useState(false)
+  const [selectedSubForProfile, setSelectedSubForProfile] = useState<SellerSubscription | null>(null)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [cancelSellerId, setCancelSellerId] = useState<string | null>(null)
   const [cancelSellerName, setCancelSellerName] = useState<string | null>(null)
   const [isConfirmCancelOpen, setIsConfirmCancelOpen] = useState(false)
@@ -90,6 +93,12 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const handleGrant = (sub?: SellerSubscription) => {
     setSelectedSubForGrant(sub || null)
     setIsGrantOpen(true)
+    setActiveMenuSellerId(null)
+  }
+
+  const handleViewProfile = (sub: SellerSubscription) => {
+    setSelectedSubForProfile(sub)
+    setIsProfileOpen(true)
     setActiveMenuSellerId(null)
   }
 
@@ -206,8 +215,13 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
               filtered.map((sub) => (
                 <tr key={sub.sellerId} className="hover:bg-gray-50/90 transition-colors group">
                   <td className="p-4 sm:p-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6338f6] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden border border-purple-100/60 shadow-xs">
+                    <div 
+                      onClick={() => handleViewProfile(sub)}
+                      role="button"
+                      tabIndex={0}
+                      className="flex items-center gap-3 cursor-pointer group/seller text-left"
+                    >
+                      <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6338f6] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden border border-purple-100/60 shadow-xs group-hover/seller:border-[#6338f6]/40 transition-colors">
                         {sub.seller?.logoUri ? (
                           <img
                             src={formatMediaUrl(sub.seller.logoUri) || ""}
@@ -224,7 +238,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[150px] sm:max-w-[200px] group-hover:text-[#6338f6] transition-colors">
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[150px] sm:max-w-[200px] group-hover/seller:text-[#6338f6] transition-colors">
                           {sub.seller?.businessName || sub.sellerId}
                         </p>
                         <div className="flex items-center gap-1.5 text-[11px] text-gray-400 truncate">
@@ -285,10 +299,17 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
                     {activeMenuSellerId === sub.sellerId && (
                       <div className="absolute right-6 top-12 z-20 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 text-left">
                         <button
-                          onClick={() => handleGrant(sub)}
+                          onClick={() => handleViewProfile(sub)}
                           className="w-full px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
-                          <Edit3Icon size={14} className="text-[#6338f6]" />
+                          <EyeIcon size={14} className="text-[#6338f6]" />
+                          View Profile
+                        </button>
+                        <button
+                          onClick={() => handleGrant(sub)}
+                          className="w-full px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-50"
+                        >
+                          <Edit3Icon size={14} className="text-gray-500" />
                           Update / Grant Plan
                         </button>
                         {sub.status === "ACTIVE" && (
@@ -348,6 +369,14 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
         plans={plans}
         open={isGrantOpen}
         onOpenChange={setIsGrantOpen}
+      />
+
+      {/* Modal for Viewing Seller Profile */}
+      <SellerProfileModal
+        subscription={selectedSubForProfile}
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        onGrantPlan={(sub) => handleGrant(sub)}
       />
 
       {/* Popup Confirmation for Cancelling Subscription */}
