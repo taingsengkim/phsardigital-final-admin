@@ -42,8 +42,12 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("logged_out")) {
+      const hasLoggedOutCookie = document.cookie.includes("logged_out=1");
+      if (urlParams.get("logged_out") || hasLoggedOutCookie) {
         setLoggedOutMessage("You have been signed out. Please sign in with an administrator account.");
+        if (hasLoggedOutCookie) {
+          document.cookie = "logged_out=; path=/; max-age=0";
+        }
         return;
       }
       const err = urlParams.get("error") || urlParams.get("error_description");

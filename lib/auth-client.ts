@@ -9,3 +9,14 @@ export const authClient = createAuthClient({
 });
 
 export const { useSession, signIn, signOut } = authClient;
+
+export async function logoutFromKeycloak() {
+  if (typeof window !== "undefined") {
+    try {
+      await authClient.signOut();
+    } catch {
+      // ignore
+    }
+    window.location.assign("/logout");
+  }
+}

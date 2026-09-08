@@ -105,6 +105,9 @@ function initDatabase() {
     try {
       database.exec(`ALTER TABLE "user" ADD COLUMN "idToken" text default ''`);
     } catch {}
+    try {
+      database.exec(`ALTER TABLE "user" ADD COLUMN "refreshToken" text default ''`);
+    } catch {}
   } catch (err) {
     console.error("Database schema init error:", err);
   }
@@ -223,6 +226,11 @@ export const auth = betterAuth({
         required: false,
         defaultValue: "",
       },
+      refreshToken: {
+        type: "string",
+        required: false,
+        defaultValue: "",
+      },
     },
   },
   plugins: [
@@ -267,6 +275,7 @@ export const auth = betterAuth({
               image: typeof claims.picture === "string" ? claims.picture : undefined,
               accessToken: tokens.accessToken || "",
               idToken: tokens.idToken || "",
+              refreshToken: tokens.refreshToken || "",
               roles: serializeRoles([
                 ...extractRealmRoles(accessClaims),
                 ...extractRealmRoles(idClaims),
@@ -281,10 +290,12 @@ export const auth = betterAuth({
               roles: string;
               accessToken?: string;
               idToken?: string;
+              refreshToken?: string;
             } = {
               roles: typeof p.roles === "string" ? p.roles : "",
               accessToken: typeof p.accessToken === "string" ? p.accessToken : "",
               idToken: typeof p.idToken === "string" ? p.idToken : "",
+              refreshToken: typeof p.refreshToken === "string" ? p.refreshToken : "",
             };
             return mapped;
           },
@@ -297,7 +308,7 @@ export const auth = betterAuth({
 /**
  * Look up the Keycloak id_token for a user so logout can send id_token_hint.
  */
-export async function getKeycloakIdToken(userId: string, headers?: Headers): Promise<string | null> {
+export async function getKeycloakIdToken(userId?: string, headers?: Headers): Promise<string | null> {
   if (headers) {
     try {
       const session = await getServerSession(headers);
@@ -308,6 +319,8 @@ export async function getKeycloakIdToken(userId: string, headers?: Headers): Pro
     }
   }
 
+  if (!userId) return null;
+
   try {
     const row = db
       .prepare(
@@ -315,7 +328,48 @@ export async function getKeycloakIdToken(userId: string, headers?: Headers): Pro
       )
       .get(userId) as { idToken: string | null } | undefined;
 
-    return row?.idToken ?? null;
+    if (row?.idToken) return row.idToken;
+
+    const userRow = db
+      .prepare("select idToken from user where id = ?")
+      .get(userId) as { idToken: string | null } | undefined;
+
+    return userRow?.idToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Look up the Keycloak refresh_token for a user so backchannel logout can revoke the session.
+ */
+export async function getKeycloakRefreshToken(userId?: string, headers?: Headers): Promise<string | null> {
+  if (headers) {
+    try {
+      const session = await getServerSession(headers);
+      const user = session?.user as (User & { refreshToken?: string }) | undefined;
+      if (user?.refreshToken) return user.refreshToken;
+    } catch {
+      // fallback to DB
+    }
+  }
+
+  if (!userId) return null;
+
+  try {
+    const row = db
+      .prepare(
+        "select refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+      )
+      .get(userId) as { refreshToken: string | null } | undefined;
+
+    if (row?.refreshToken) return row.refreshToken;
+
+    const userRow = db
+      .prepare("select refreshToken from user where id = ?")
+      .get(userId) as { refreshToken: string | null } | undefined;
+
+    return userRow?.refreshToken ?? null;
   } catch {
     return null;
   }
@@ -340,14 +394,16 @@ export async function backchannelKeycloakLogout(
     let refreshToken = tokens?.refreshToken;
 
     if (!refreshToken && userId) {
+      refreshToken = await getKeycloakRefreshToken(userId);
+    }
+    if (!accessToken && userId) {
       try {
         const row = db
           .prepare(
-            "select accessToken, refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+            "select accessToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
           )
-          .get(userId) as { accessToken: string | null; refreshToken: string | null } | undefined;
+          .get(userId) as { accessToken: string | null } | undefined;
         accessToken = row?.accessToken || accessToken;
-        refreshToken = row?.refreshToken || refreshToken;
       } catch {}
     }
 
@@ -366,6 +422,7 @@ export async function backchannelKeycloakLogout(
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: body.toString(),
           cache: "no-store",
+          signal: AbortSignal.timeout(4000),
         });
       } catch (err) {
         console.warn("[auth] Keycloak backchannel logout error:", err);
@@ -383,6 +440,7 @@ export async function backchannelKeycloakLogout(
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: body.toString(),
           cache: "no-store",
+          signal: AbortSignal.timeout(4000),
         });
       } catch (err) {
         console.warn("[auth] Keycloak refresh token revoke error:", err);
@@ -402,6 +460,7 @@ export async function backchannelKeycloakLogout(
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: body.toString(),
           cache: "no-store",
+          signal: AbortSignal.timeout(4000),
         });
       } catch (err) {
         console.warn("[auth] Keycloak access token revoke error:", err);
@@ -425,6 +484,7 @@ export async function backchannelKeycloakLogout(
           UPDATE "user"
           SET accessToken = '',
               idToken = '',
+              refreshToken = '',
               updatedAt = ?
           WHERE id = ?
         `).run(new Date().toISOString(), userId);
