@@ -183,6 +183,7 @@ export async function GET(request: NextRequest) {
         businessName: profile.businessName ?? ranked.businessName ?? "",
         businessType: profile.businessType ?? "",
         logoUri: profile.logoUri ?? ranked.logoUri ?? null,
+        coverUri: profile.coverUri ?? profile.coverUrl ?? profile.coverImage ?? profile.cover ?? profile.bannerUri ?? ranked.coverUri ?? null,
         city: profile.city ?? ranked.city ?? null,
         province: profile.province ?? ranked.province ?? null,
         address: profile.address ?? null,

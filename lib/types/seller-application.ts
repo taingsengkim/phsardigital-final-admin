@@ -12,6 +12,7 @@ export interface SellerApplication {
   email: string
   avatar: string | null
   logoUri: string | null
+  coverUri: string | null
   businessName: string
   businessType: string
   phone: string

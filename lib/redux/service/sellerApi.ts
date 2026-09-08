@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 
 import type { Seller, SellerStatus } from "@/lib/types/seller"
 import { extractList, toNumber, toText } from "./api-utils"
+import { formatMediaUrl } from "@/lib/media-url"
 
 function normalizeStatus(value: unknown): SellerStatus {
   if (typeof value === "boolean") return value ? "ACTIVE" : "SUSPENDED"
@@ -31,7 +32,16 @@ function normalizeSeller(value: unknown, index: number): Seller {
     reviews: record.reviewCount == null && record.reviews == null ? null : toNumber(record.reviewCount ?? record.reviews),
     sales: toText(record.sales) || toText(record.totalSales) || `${completedOrders.toLocaleString()} orders`,
     status: normalizeStatus(record.status ?? record.state ?? record.isActive ?? true),
-    avatar: toText(record.logoUri) || toText(record.avatar) || toText(record.avatarUrl) || null,
+    avatar: formatMediaUrl(toText(record.logoUri) || toText(record.avatar) || toText(record.avatarUrl)) || null,
+    coverUri: formatMediaUrl(
+      toText(record.coverUri) ||
+      toText(record.coverUrl) ||
+      toText(record.coverImage) ||
+      toText(record.cover) ||
+      toText(record.bannerUri) ||
+      toText(record.bannerUrl) ||
+      toText(record.bannerImage)
+    ) || null,
     location: [city, province].filter(Boolean).join(", ") || "Not provided",
     completedOrders,
     selected: Boolean(record.selected),

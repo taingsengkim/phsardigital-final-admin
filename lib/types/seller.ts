@@ -14,6 +14,7 @@ export interface Seller {
   sales: string
   status: SellerStatus
   avatar: string | null
+  coverUri?: string | null
   location: string
   completedOrders: number
   selected?: boolean

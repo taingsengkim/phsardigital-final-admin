@@ -6,6 +6,7 @@ import type {
   SellerSubscriptionPage,
   GrantSubscriptionRequest,
 } from "@/lib/types/subscription"
+import { formatMediaUrl } from "@/lib/media-url"
 
 interface GetSellerSubscriptionsParams {
   status?: string
@@ -104,7 +105,10 @@ export const subscriptionApi = createApi({
               ? {
                   sellerId: String(s.sellerId || r.sellerId || ""),
                   businessName: String(s.businessName || ""),
-                  logoUri: s.logoUri ? String(s.logoUri) : null,
+                  logoUri: s.logoUri ? formatMediaUrl(String(s.logoUri)) : null,
+                  coverUri: (s.coverUri || s.coverUrl || s.coverImage || s.cover || s.bannerUri)
+                    ? formatMediaUrl(String(s.coverUri || s.coverUrl || s.coverImage || s.cover || s.bannerUri))
+                    : null,
                   phoneNumber: s.phoneNumber ? String(s.phoneNumber) : null,
                   city: s.city ? String(s.city) : null,
                   isActive: s.isActive !== false,

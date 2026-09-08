@@ -30,6 +30,7 @@ export interface SubscriptionSeller {
   sellerId: string
   businessName: string
   logoUri?: string | null
+  coverUri?: string | null
   phoneNumber?: string | null
   city?: string | null
   isActive?: boolean

@@ -15,6 +15,7 @@ import {
   FileCheck2Icon,
   FileTextIcon,
   FingerprintIcon,
+  ImageIcon,
   MapPinIcon,
   RefreshCwIcon,
   ShieldAlertIcon,
@@ -651,40 +652,71 @@ export function ApplicationDetails({ applicationId }: ApplicationDetailsProps) {
           </div>
         )}
 
-        <section className="relative mb-5 overflow-hidden rounded-2xl border border-purple-100 bg-white p-5 shadow-[0_8px_30px_rgba(68,44,160,0.06)] sm:p-6">
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#6338f6] via-violet-400 to-fuchsia-300" />
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <Avatar className="size-20 shrink-0 rounded-2xl border-4 border-white shadow-lg shadow-purple-100">
-              <AvatarImage
-                src={details.logoUri || undefined}
-                className="object-cover"
+        <section className="relative mb-5 overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-[0_8px_30px_rgba(68,44,160,0.06)]">
+          {/* Cover Photo / Store Banner */}
+          <div className="relative h-36 sm:h-48 md:h-56 w-full bg-gradient-to-r from-purple-100/90 via-indigo-50/80 to-purple-50 overflow-hidden">
+            {details.coverUri ? (
+              <img
+                src={details.coverUri}
+                alt={`${details.businessName} cover`}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
               />
-              <AvatarFallback className="rounded-2xl bg-[#6338f6] text-xl font-bold text-white">
-                {details.businessName.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge status={details.status} large />
-                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
-                  {details.businessType}
+            ) : (
+              <div className="h-full w-full bg-gradient-to-r from-purple-600/10 via-indigo-500/5 to-purple-600/10 flex items-center justify-center">
+                <span className="text-xs font-semibold uppercase tracking-wider text-purple-400/80">
+                  Shop Cover Photo
                 </span>
               </div>
-              <h1 className="mt-3 truncate text-2xl font-bold tracking-tight text-gray-950 sm:text-3xl">
-                {details.businessName}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500">
-                <span className="flex items-center gap-1.5">
-                  <Clock3Icon size={13} /> Submitted {details.appliedOn}
-                  {details.appliedAt ? ` at ${details.appliedAt}` : ""}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <MapPinIcon size={13} />{" "}
-                  {details.city !== "Not provided"
-                    ? details.city
-                    : details.province}
-                </span>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+            {details.coverUri ? (
+              <span className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md shadow-xs">
+                <ImageIcon size={13} /> Shop Cover
+              </span>
+            ) : (
+              <span className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500 backdrop-blur-xs border border-gray-200/60">
+                No cover uploaded
+              </span>
+            )}
+          </div>
+
+          <div className="p-5 sm:p-6 pt-0 relative">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end -mt-10 sm:-mt-14">
+              <Avatar className="size-20 sm:size-24 shrink-0 rounded-2xl border-4 border-white shadow-xl bg-white ring-1 ring-purple-100">
+                <AvatarImage
+                  src={details.logoUri || undefined}
+                  className="object-cover"
+                />
+                <AvatarFallback className="rounded-2xl bg-[#6338f6] text-2xl font-bold text-white">
+                  {details.businessName.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0 flex-1 pb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={details.status} large />
+                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
+                    {details.businessType}
+                  </span>
+                </div>
+                <h1 className="mt-2 truncate text-2xl font-bold tracking-tight text-gray-950 sm:text-3xl">
+                  {details.businessName}
+                </h1>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-gray-500">
+                  <span className="flex items-center gap-1.5">
+                    <Clock3Icon size={13} /> Submitted {details.appliedOn}
+                    {details.appliedAt ? ` at ${details.appliedAt}` : ""}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <MapPinIcon size={13} />{" "}
+                    {details.city !== "Not provided"
+                      ? details.city
+                      : details.province}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -737,6 +769,76 @@ export function ApplicationDetails({ applicationId }: ApplicationDetailsProps) {
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-600">
                   {details.description}
                 </p>
+              </div>
+
+              {/* Store Branding Assets */}
+              <div className="mt-6 border-t border-gray-100 pt-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  Store branding assets
+                </h3>
+                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                  {/* Shop Logo */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 flex items-center gap-3.5">
+                    <div className="size-14 rounded-xl bg-white border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                      {details.logoUri ? (
+                        <img
+                          src={details.logoUri}
+                          alt="Shop Logo"
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <Building2Icon className="size-6 text-gray-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-gray-900">Shop Logo</p>
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                        {details.logoUri ? "Logo uploaded" : "Default avatar used"}
+                      </p>
+                      {details.logoUri && (
+                        <a
+                          href={details.logoUri}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6338f6] hover:underline mt-1"
+                        >
+                          <ExternalLinkIcon size={11} /> View full size
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Shop Cover */}
+                  <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-3.5 flex items-center gap-3.5">
+                    <div className="h-14 w-20 rounded-xl bg-white border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                      {details.coverUri ? (
+                        <img
+                          src={details.coverUri}
+                          alt="Shop Cover"
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="size-6 text-gray-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-gray-900">Shop Cover</p>
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                        {details.coverUri ? "Cover banner uploaded" : "No cover uploaded"}
+                      </p>
+                      {details.coverUri && (
+                        <a
+                          href={details.coverUri}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6338f6] hover:underline mt-1"
+                        >
+                          <ExternalLinkIcon size={11} /> View full size
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </SectionCard>
 

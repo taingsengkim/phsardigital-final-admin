@@ -59,6 +59,7 @@ export function SellerProfileModal({
   const businessName = seller?.businessName || "Untitled Store"
   const sellerId = subscription.sellerId
   const logoUrl = seller?.logoUri ? formatMediaUrl(seller.logoUri) : null
+  const coverUrl = seller?.coverUri ? formatMediaUrl(seller.coverUri) : null
   const isUnlimited = subscription.listingLimit === null || subscription.listingLimit < 0
   const limitNumber = isUnlimited ? Infinity : Number(subscription.listingLimit ?? 0)
   const usedNumber = Number(subscription.listingsUsed ?? 0)
@@ -77,69 +78,94 @@ export function SellerProfileModal({
           <DialogTitle>{businessName} Profile</DialogTitle>
         </DialogHeader>
 
-        {/* Profile Banner */}
-        <div className="rounded-2xl bg-gradient-to-br from-purple-50/80 via-indigo-50/40 to-white p-5 border border-purple-100/60 relative mb-4">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white text-[#6338f6] font-bold text-lg flex items-center justify-center shrink-0 overflow-hidden border border-purple-100 shadow-sm">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={businessName}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none"
-                  }}
-                />
-              ) : (
-                <span>{businessName.slice(0, 2).toUpperCase()}</span>
-              )}
-            </div>
+        {/* Profile Banner with Shop Cover & Logo */}
+        <div className="rounded-2xl overflow-hidden border border-purple-100/70 relative mb-4 bg-white shadow-xs">
+          <div className="relative h-28 sm:h-32 w-full bg-gradient-to-r from-purple-100/80 via-indigo-50/70 to-purple-50 overflow-hidden">
+            {coverUrl ? (
+              <img
+                src={coverUrl}
+                alt={`${businessName} cover`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none"
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-purple-600/10 via-indigo-500/5 to-purple-600/10 flex items-center justify-center">
+                <span className="text-[11px] font-semibold tracking-wider uppercase text-purple-400/80">Store Cover</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/5 to-transparent" />
+            {coverUrl && (
+              <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/50 text-white backdrop-blur-md">
+                Cover
+              </span>
+            )}
+          </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-lg font-bold text-gray-900 truncate">{businessName}</h3>
-                {seller?.isActive !== false ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                    <span className="size-1.5 rounded-full bg-emerald-500"></span> Active Seller
-                  </span>
+          <div className="p-4 sm:p-5 pt-0 relative bg-white">
+            <div className="flex items-start gap-4 -mt-7 sm:-mt-8">
+              <div className="w-16 h-16 rounded-2xl bg-white text-[#6338f6] font-bold text-lg flex items-center justify-center shrink-0 overflow-hidden border-4 border-white shadow-md">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={businessName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none"
+                    }}
+                  />
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-100">
-                    <span className="size-1.5 rounded-full bg-rose-500"></span> Suspended
-                  </span>
+                  <span>{businessName.slice(0, 2).toUpperCase()}</span>
                 )}
               </div>
 
-              {/* Seller ID with copy button */}
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-xs text-gray-400 font-mono bg-white/80 px-2 py-0.5 rounded-md border border-gray-100 truncate max-w-[220px]">
-                  {sellerId}
-                </span>
-                <button
-                  onClick={handleCopyId}
-                  title="Copy Seller ID"
-                  className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
-                >
-                  {copied ? <CheckIcon size={14} className="text-emerald-600" /> : <CopyIcon size={14} />}
-                </button>
-              </div>
+              <div className="min-w-0 flex-1 pt-1.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg font-bold text-gray-900 truncate">{businessName}</h3>
+                  {seller?.isActive !== false ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      <span className="size-1.5 rounded-full bg-emerald-500"></span> Active Seller
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-100">
+                      <span className="size-1.5 rounded-full bg-rose-500"></span> Suspended
+                    </span>
+                  )}
+                </div>
 
-              {/* Quick info tags */}
-              <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
-                {seller?.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPinIcon size={13} className="text-gray-400" />
-                    {seller.city}
+                {/* Seller ID with copy button */}
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-xs text-gray-400 font-mono bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100 truncate max-w-[220px]">
+                    {sellerId}
                   </span>
-                )}
-                {seller?.phoneNumber && (
-                  <a
-                    href={`tel:${seller.phoneNumber}`}
-                    className="flex items-center gap-1 text-[#6338f6] hover:underline"
+                  <button
+                    onClick={handleCopyId}
+                    title="Copy Seller ID"
+                    className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                   >
-                    <PhoneIcon size={13} />
-                    {seller.phoneNumber}
-                  </a>
-                )}
+                    {copied ? <CheckIcon size={14} className="text-emerald-600" /> : <CopyIcon size={14} />}
+                  </button>
+                </div>
+
+                {/* Quick info tags */}
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 flex-wrap">
+                  {seller?.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPinIcon size={13} className="text-gray-400" />
+                      {seller.city}
+                    </span>
+                  )}
+                  {seller?.phoneNumber && (
+                    <a
+                      href={`tel:${seller.phoneNumber}`}
+                      className="flex items-center gap-1 text-[#6338f6] hover:underline"
+                    >
+                      <PhoneIcon size={13} />
+                      {seller.phoneNumber}
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>

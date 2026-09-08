@@ -82,8 +82,23 @@ function normalizeApplication(value: unknown, index = 0): SellerApplication {
 
   const rawLogo = toText(record.logoUri) || toText(record.logoObjectName) || null
   const rawAvatar = toText(record.avatarUrl) || toText(record.avatar) || toText(user.image) || rawLogo || null
+  const rawCover =
+    toText(record.coverUri) ||
+    toText(record.coverUrl) ||
+    toText(record.coverImage) ||
+    toText(record.cover) ||
+    toText(record.coverObjectName) ||
+    toText(business.coverUri) ||
+    toText(business.coverUrl) ||
+    toText(business.coverImage) ||
+    toText(business.cover) ||
+    toText(record.bannerUri) ||
+    toText(record.bannerUrl) ||
+    toText(record.bannerImage) ||
+    null
   const logoUri = formatMediaUrl(rawLogo) || rawLogo
   const avatar = formatMediaUrl(rawAvatar) || rawAvatar
+  const coverUri = formatMediaUrl(rawCover) || rawCover
 
   const address = toText(record.address) || toText(business.address)
   const city = toText(record.city) || toText(business.city)
@@ -132,6 +147,7 @@ function normalizeApplication(value: unknown, index = 0): SellerApplication {
     email: toText(record.email) || toText(user.email) || "No email provided",
     avatar,
     logoUri,
+    coverUri,
     businessName: toText(record.businessName) || toText(business.name) || "Not provided",
     businessType: toText(record.businessType) || toText(business.type) || "Not provided",
     phone: toText(record.phone) || toText(record.phoneNumber) || toText(user.phone) || "Not provided",
