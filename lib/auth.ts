@@ -4,31 +4,44 @@ import { genericOAuth } from "better-auth/plugins";
 import Database from "better-sqlite3";
 import { NextResponse } from "next/server";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 import { isAdmin, serializeRoles } from "@/lib/roles";
 import { stripSessionDataCookies } from "@/lib/session-cookies";
 
-// Initialize a local SQLite database for session storage, using /tmp on Vercel
+// Initialize a local SQLite database for session storage, using os.tmpdir() on Vercel
 function initDatabase() {
   const isServerless = Boolean(
     process.env.VERCEL ||
-    process.env.AWS_LAMBDA_FUNCTION_NAME ||
-    (process.env.NODE_ENV === "production" && !process.env.IS_LOCAL)
+    process.env.AWS_LAMBDA_FUNCTION_NAME
   );
 
   let dbFile = path.join(process.cwd(), ".better-auth.db");
 
   if (isServerless) {
-    const tmpDb = path.join("/tmp", ".better-auth.db");
+    const tmpDir = os.tmpdir();
+    if (!fs.existsSync(tmpDir)) {
+      try {
+        fs.mkdirSync(tmpDir, { recursive: true });
+      } catch {}
+    }
+    const tmpDb = path.join(tmpDir, ".better-auth.db");
     if (!fs.existsSync(tmpDb) && fs.existsSync(dbFile)) {
       try {
         fs.copyFileSync(dbFile, tmpDb);
       } catch (e) {
-        console.warn("Could not copy initial .better-auth.db to /tmp:", e);
+        console.warn("Could not copy initial .better-auth.db to tmp:", e);
       }
     }
     dbFile = tmpDb;
+  }
+
+  const dbDir = path.dirname(dbFile);
+  if (!fs.existsSync(dbDir)) {
+    try {
+      fs.mkdirSync(dbDir, { recursive: true });
+    } catch {}
   }
 
   const database = new Database(dbFile);
@@ -128,11 +141,17 @@ function extractRealmRoles(claims: Record<string, unknown>): string[] {
   );
 }
 
+function isTokenExpired(token?: string): boolean {
+  if (!token) return true;
+  const claims = decodeJwtPayload(token);
+  if (!claims.exp || typeof claims.exp !== "number") return false;
+  return Date.now() >= (claims.exp * 1000 - 30000);
+}
+
 function getBaseUrl(): string {
   const isServerless = Boolean(
     process.env.VERCEL ||
-    process.env.AWS_LAMBDA_FUNCTION_NAME ||
-    (process.env.NODE_ENV === "production" && !process.env.IS_LOCAL)
+    process.env.AWS_LAMBDA_FUNCTION_NAME
   );
 
   const envUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
@@ -146,7 +165,7 @@ function getBaseUrl(): string {
       if (process.env.VERCEL_URL) {
         return `https://${process.env.VERCEL_URL}`;
       }
-      return "https://phsardigital-final-admin.vercel.app";
+      return process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://admin.phasardigital.com";
     }
   }
 
@@ -170,11 +189,17 @@ export const auth = betterAuth({
   },
   trustedOrigins: [
     "http://localhost:3000",
+    "http://localhost:3001",
+    "https://admin.phasardigital.com",
+    "https://admin.phsardigital.com",
+    "https://phasardigital.com",
+    "https://phsardigital.com",
     "https://phsardigital-final-admin.vercel.app",
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
     ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
       : []),
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
     ...(process.env.NEXT_PUBLIC_APP_URL ? [process.env.NEXT_PUBLIC_APP_URL] : []),
   ],
   user: {
@@ -297,6 +322,143 @@ export async function getKeycloakIdToken(userId: string, headers?: Headers): Pro
 }
 
 /**
+ * Refreshes an expired Keycloak access token using the stored refresh token.
+ * Updates both the `account` and `user` tables upon successful refresh.
+ */
+export async function refreshKeycloakAccessToken(
+  userId: string,
+  refreshToken: string,
+): Promise<string | null> {
+  const issuer = process.env.KEYCLOAK_ISSUER;
+  const clientId = process.env.KEYCLOAK_CLIENT_ID;
+  const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+
+  if (!issuer || !clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  const tokenEndpoint = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/token`;
+
+  try {
+    const body = new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+    });
+
+    const res = await fetch(tokenEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.warn(`[auth] Keycloak token refresh failed (${res.status}):`, errText);
+      return null;
+    }
+
+    const data = (await res.json()) as {
+      access_token?: string;
+      refresh_token?: string;
+      id_token?: string;
+      expires_in?: number;
+    };
+
+    if (!data.access_token) {
+      return null;
+    }
+
+    const now = new Date();
+    const expiresAt = typeof data.expires_in === "number"
+      ? new Date(now.getTime() + data.expires_in * 1000).toISOString()
+      : null;
+
+    try {
+      db.prepare(`
+        UPDATE account
+        SET accessToken = ?,
+            refreshToken = coalesce(?, refreshToken),
+            idToken = coalesce(?, idToken),
+            accessTokenExpiresAt = coalesce(?, accessTokenExpiresAt),
+            updatedAt = ?
+        WHERE userId = ? AND providerId = 'keycloak'
+      `).run(
+        data.access_token,
+        data.refresh_token ?? null,
+        data.id_token ?? null,
+        expiresAt,
+        now.toISOString(),
+        userId,
+      );
+
+      db.prepare(`
+        UPDATE "user"
+        SET accessToken = ?,
+            idToken = coalesce(?, idToken),
+            updatedAt = ?
+        WHERE id = ?
+      `).run(
+        data.access_token,
+        data.id_token ?? null,
+        now.toISOString(),
+        userId,
+      );
+    } catch (dbErr) {
+      console.error("[auth] Failed to persist refreshed Keycloak tokens:", dbErr);
+    }
+
+    return data.access_token;
+  } catch (err) {
+    console.error("[auth] Error refreshing Keycloak access token:", err);
+    return null;
+  }
+}
+
+/**
+ * Ensures a valid (non-expired) Keycloak access token is available for the given user,
+ * automatically performing a refresh against Keycloak if needed.
+ */
+export async function getValidKeycloakTokenForUser(
+  userId: string,
+  userAccessToken?: string,
+): Promise<string | null> {
+  // 1. Check user token in memory / session
+  if (userAccessToken && !isTokenExpired(userAccessToken)) {
+    return userAccessToken;
+  }
+
+  // 2. Query account table
+  try {
+    const row = db
+      .prepare(
+        "select accessToken, refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+      )
+      .get(userId) as { accessToken: string | null; refreshToken: string | null } | undefined;
+
+    if (row?.accessToken && !isTokenExpired(row.accessToken)) {
+      return row.accessToken;
+    }
+
+    // 3. If accessToken is expired but refreshToken exists, refresh it
+    if (row?.refreshToken) {
+      const refreshedToken = await refreshKeycloakAccessToken(userId, row.refreshToken);
+      if (refreshedToken && !isTokenExpired(refreshedToken)) {
+        return refreshedToken;
+      }
+    }
+  } catch (err) {
+    console.error("[auth] Error querying account for token:", err);
+  }
+
+  return null;
+}
+
+/**
  * Gate a route handler on the Keycloak ADMIN realm role.
  */
 export async function getServerSession(headers: Headers) {
@@ -317,45 +479,44 @@ export async function requireAdmin(request: Request): Promise<Response | null> {
     );
   }
 
+  // Verify that the user has an active, valid Keycloak token or can refresh it
+  const authHeaders = await getAuthHeader(request);
+  if (!authHeaders.Authorization) {
+    return NextResponse.json(
+      {
+        message: "Your session has expired. Please sign in again.",
+        code: "SESSION_EXPIRED",
+      },
+      { status: 401 },
+    );
+  }
+
   return null;
 }
 
 export async function getAuthHeader(request: Request): Promise<Record<string, string>> {
   const incomingAuth = request.headers.get("authorization");
   if (incomingAuth) {
-    return { Authorization: incomingAuth };
+    const token = incomingAuth.startsWith("Bearer ")
+      ? incomingAuth.slice(7).trim()
+      : incomingAuth;
+    if (!isTokenExpired(token)) {
+      return { Authorization: incomingAuth };
+    }
+    console.warn("[auth] Incoming Authorization header token is expired. Falling back to session token...");
   }
 
   try {
     const session = await getServerSession(request.headers);
     const user = session?.user as (User & { accessToken?: string; id?: string }) | undefined;
-    
-    if (user?.accessToken) {
-      return { Authorization: `Bearer ${user.accessToken}` };
+
+    if (!user?.id) {
+      return {};
     }
 
-    if (user?.id) {
-      try {
-        const row = db
-          .prepare(
-            "select accessToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
-          )
-          .get(user.id) as { accessToken: string | null } | undefined;
-        if (row?.accessToken) {
-          return { Authorization: `Bearer ${row.accessToken}` };
-        }
-      } catch {
-        // fallback
-      }
-    }
-
-    const token = await auth.api.getAccessToken({
-      headers: request.headers,
-      body: { providerId: "keycloak" },
-    });
-
-    if (token?.accessToken) {
-      return { Authorization: `Bearer ${token.accessToken}` };
+    const validToken = await getValidKeycloakTokenForUser(user.id, user.accessToken);
+    if (validToken) {
+      return { Authorization: `Bearer ${validToken}` };
     }
   } catch (err) {
     console.error("Error retrieving or refreshing the Keycloak access token:", err);

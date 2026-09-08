@@ -24,7 +24,10 @@ export async function GET(request: NextRequest) {
 
   const keycloakIssuer = process.env.KEYCLOAK_ISSUER || "https://auth.quizzy.it.com/realms/phsardigital";
   const keycloakClientId = process.env.KEYCLOAK_CLIENT_ID || "phsardigital-admin";
-  const postLogoutRedirectUri = `${request.nextUrl.origin}/login?logged_out=true`;
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
+  const postLogoutRedirectUri = `${origin}/login?logged_out=true`;
 
   const logoutUrl = new URL(`${keycloakIssuer}/protocol/openid-connect/logout`);
   logoutUrl.searchParams.set("client_id", keycloakClientId);
