@@ -13,6 +13,7 @@ import {
 import { GrantSubscriptionModal } from "./grant-subscription-modal"
 import { CustomSelect } from "@/components/ui/custom-select"
 import { getApiErrorMessage } from "@/lib/redux/service/api-utils"
+import { formatMediaUrl } from "@/lib/media-url"
 
 interface SubscriptionTableProps {
   plans: SubscriptionPlan[]
@@ -53,6 +54,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const [selectedSubForGrant, setSelectedSubForGrant] = useState<SellerSubscription | null>(null)
   const [isGrantOpen, setIsGrantOpen] = useState(false)
   const [cancelSellerId, setCancelSellerId] = useState<string | null>(null)
+  const [cancelSellerName, setCancelSellerName] = useState<string | null>(null)
   const [isConfirmCancelOpen, setIsConfirmCancelOpen] = useState(false)
 
   const { data, isLoading, isFetching } = useGetSellerSubscriptionsQuery({
@@ -71,12 +73,15 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
   const firstRow = totalElements === 0 ? 0 : pageNumber * pageSize + 1
   const lastRow = Math.min(totalElements, pageNumber * pageSize + subscriptions.length)
 
-  // Upstream has no seller search parameter, so this narrows the loaded page only.
+  // Filter loaded page by seller ID, business name, phone, city, or plan name
   const filtered = subscriptions.filter((sub) => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
       sub.sellerId.toLowerCase().includes(q) ||
+      (sub.seller?.businessName && sub.seller.businessName.toLowerCase().includes(q)) ||
+      (sub.seller?.phoneNumber && sub.seller.phoneNumber.toLowerCase().includes(q)) ||
+      (sub.seller?.city && sub.seller.city.toLowerCase().includes(q)) ||
       sub.planCode.toLowerCase().includes(q) ||
       (sub.planDisplayName && sub.planDisplayName.toLowerCase().includes(q))
     )
@@ -88,8 +93,9 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
     setActiveMenuSellerId(null)
   }
 
-  const promptCancel = (sellerId: string) => {
+  const promptCancel = (sellerId: string, sellerName?: string) => {
     setCancelSellerId(sellerId)
+    setCancelSellerName(sellerName || null)
     setIsConfirmCancelOpen(true)
     setActiveMenuSellerId(null)
   }
@@ -101,7 +107,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
       showToast({
         type: "success",
         title: "Subscription Cancelled",
-        message: `Subscription for seller ${cancelSellerId} was successfully cancelled.`,
+        message: `Subscription for seller "${cancelSellerName || cancelSellerId}" was successfully cancelled.`,
       })
     } catch (err: unknown) {
       showToast({
@@ -200,9 +206,48 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
               filtered.map((sub) => (
                 <tr key={sub.sellerId} className="hover:bg-gray-50/90 transition-colors group">
                   <td className="p-4 sm:p-6">
-                    <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[150px] sm:max-w-[200px] group-hover:text-[#6338f6] transition-colors">
-                      {sub.sellerId}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6338f6] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden border border-purple-100/60 shadow-xs">
+                        {sub.seller?.logoUri ? (
+                          <img
+                            src={formatMediaUrl(sub.seller.logoUri) || ""}
+                            alt={sub.seller.businessName || sub.sellerId}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = "none"
+                            }}
+                          />
+                        ) : (
+                          <span>
+                            {(sub.seller?.businessName || sub.sellerId).slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 truncate max-w-[150px] sm:max-w-[200px] group-hover:text-[#6338f6] transition-colors">
+                          {sub.seller?.businessName || sub.sellerId}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 truncate">
+                          {sub.seller?.businessName && (
+                            <span className="font-mono text-gray-400">
+                              {sub.sellerId.slice(0, 8)}...
+                            </span>
+                          )}
+                          {sub.seller?.city && (
+                            <>
+                              <span>•</span>
+                              <span>{sub.seller.city}</span>
+                            </>
+                          )}
+                          {sub.seller?.phoneNumber && (
+                            <>
+                              <span>•</span>
+                              <span>{sub.seller.phoneNumber}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="p-4 sm:p-6">
                     <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-purple-50 text-purple-700 border border-purple-100">
@@ -248,7 +293,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
                         </button>
                         {sub.status === "ACTIVE" && (
                           <button
-                            onClick={() => promptCancel(sub.sellerId)}
+                            onClick={() => promptCancel(sub.sellerId, sub.seller?.businessName)}
                             className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2 border-t border-gray-50"
                           >
                             <BanIcon size={14} />
@@ -310,7 +355,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
         open={isConfirmCancelOpen}
         onOpenChange={setIsConfirmCancelOpen}
         title="Cancel Seller Subscription"
-        description={`Cancel the subscription for seller "${cancelSellerId}"? This takes effect IMMEDIATELY and there is NO REFUND — the seller loses the rest of a period they already paid for, and nothing in the system records that they are owed anything. Use this for moderation, not customer service.`}
+        description={`Cancel the subscription for seller "${cancelSellerName || cancelSellerId}"? This takes effect IMMEDIATELY and there is NO REFUND — the seller loses the rest of a period they already paid for, and nothing in the system records that they are owed anything. Use this for moderation, not customer service.`}
         confirmText="Cancel Subscription"
         variant="danger"
         isLoading={isCancelling}

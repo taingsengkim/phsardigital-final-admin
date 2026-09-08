@@ -92,15 +92,24 @@ export function GrantSubscriptionModal({
       <DialogContent className="sm:max-w-[480px] rounded-3xl p-6 sm:p-8">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-900">
-            {subscription ? `Manage Subscription for ${subscription.sellerId}` : "Grant / Edit Seller Subscription"}
+            {subscription
+              ? `Manage Subscription for ${subscription.seller?.businessName || subscription.sellerId}`
+              : "Grant / Edit Seller Subscription"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div>
-            <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5 block">
-              Seller ID
-            </Label>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
+                Seller ID
+              </Label>
+              {subscription?.seller?.businessName && (
+                <span className="text-xs font-semibold text-[#6338f6]">
+                  {subscription.seller.businessName}
+                </span>
+              )}
+            </div>
             <Input
               disabled={Boolean(subscription)}
               value={sellerId}

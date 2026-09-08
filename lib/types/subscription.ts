@@ -26,8 +26,18 @@ export interface UpdateSubscriptionPlanRequest {
   sortOrder?: number
 }
 
+export interface SubscriptionSeller {
+  sellerId: string
+  businessName: string
+  logoUri?: string | null
+  phoneNumber?: string | null
+  city?: string | null
+  isActive?: boolean
+}
+
 export interface SellerSubscription {
   sellerId: string
+  seller?: SubscriptionSeller | null
   planCode: string
   planDisplayName?: string
   status: "ACTIVE" | "EXPIRED" | "CANCELLED" | string

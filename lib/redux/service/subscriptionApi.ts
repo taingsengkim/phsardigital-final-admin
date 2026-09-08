@@ -99,8 +99,21 @@ export const subscriptionApi = createApi({
         return {
           content: content.map((item: unknown) => {
             const r = (item ?? {}) as Record<string, unknown>
+            const s = (r.seller && typeof r.seller === "object" ? r.seller : {}) as Record<string, unknown>
+            const seller = r.seller && typeof r.seller === "object"
+              ? {
+                  sellerId: String(s.sellerId || r.sellerId || ""),
+                  businessName: String(s.businessName || ""),
+                  logoUri: s.logoUri ? String(s.logoUri) : null,
+                  phoneNumber: s.phoneNumber ? String(s.phoneNumber) : null,
+                  city: s.city ? String(s.city) : null,
+                  isActive: s.isActive !== false,
+                }
+              : null
+
             return {
-              sellerId: String(r.sellerId || ""),
+              sellerId: String(r.sellerId || s.sellerId || ""),
+              seller,
               planCode: String(r.planCode || r.plan || ""),
               planDisplayName: r.planDisplayName ? String(r.planDisplayName) : undefined,
               status: String(r.status || "ACTIVE").toUpperCase(),
