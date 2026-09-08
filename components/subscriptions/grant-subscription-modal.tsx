@@ -10,6 +10,7 @@ import { showToast } from "@/components/ui/toast-popup"
 import { getApiErrorMessage } from "@/lib/redux/service/api-utils"
 import type { SubscriptionPlan, SellerSubscription } from "@/lib/types/subscription"
 import { useGrantSellerSubscriptionMutation } from "@/lib/redux/service/subscriptionApi"
+import { SellerSearchCombobox } from "./seller-search-combobox"
 
 interface GrantSubscriptionModalProps {
   subscription: SellerSubscription | null
@@ -55,7 +56,7 @@ export function GrantSubscriptionModal({
       showToast({
         type: "warning",
         title: "Missing Seller ID",
-        message: "Please enter a valid Seller ID.",
+        message: "Please search and select a valid seller.",
       })
       return
     }
@@ -89,7 +90,7 @@ export function GrantSubscriptionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] rounded-3xl p-6 sm:p-8">
+      <DialogContent className="sm:max-w-[520px] rounded-3xl p-6 sm:p-8">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-900">
             {subscription
@@ -102,21 +103,30 @@ export function GrantSubscriptionModal({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
-                Seller ID
+                Select Platform Seller
               </Label>
-              {subscription?.seller?.businessName && (
-                <span className="text-xs font-semibold text-[#6338f6]">
-                  {subscription.seller.businessName}
+              {subscription && (
+                <span className="text-[11px] font-semibold text-gray-400">
+                  Fixed for this subscription
                 </span>
               )}
             </div>
-            <Input
-              disabled={Boolean(subscription)}
+            <SellerSearchCombobox
               value={sellerId}
-              onChange={(e) => setSellerId(e.target.value)}
-              placeholder="e.g. seller-uuid-123"
-              required
-              className="bg-gray-50 border-gray-100 rounded-xl h-11 text-sm font-medium disabled:opacity-60"
+              onChange={(id) => setSellerId(id)}
+              disabled={Boolean(subscription)}
+              initialSeller={
+                subscription
+                  ? {
+                      sellerId: subscription.sellerId,
+                      businessName: subscription.seller?.businessName,
+                      logoUri: subscription.seller?.logoUri,
+                      phoneNumber: subscription.seller?.phoneNumber,
+                      city: subscription.seller?.city,
+                      isActive: subscription.seller?.isActive,
+                    }
+                  : null
+              }
             />
           </div>
 

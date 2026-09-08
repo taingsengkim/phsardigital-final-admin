@@ -171,7 +171,7 @@ export function SubscriptionTable({ plans }: SubscriptionTableProps) {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter this page by seller ID..."
+              placeholder="Search subscriptions by seller, plan..."
               className="pl-10 bg-gray-50/90 border border-gray-200/70 rounded-xl h-10 w-full sm:w-64 text-xs font-medium focus:ring-2 focus:ring-[#6338f6]/30 focus:border-[#6338f6]"
             />
           </div>
