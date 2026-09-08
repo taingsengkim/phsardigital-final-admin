@@ -31,7 +31,7 @@ export default async function DashboardLayout({
     (session.user as any)?.accessToken,
   );
   if (!validToken) {
-    redirect("/login");
+    redirect("/logout");
   }
 
   return <>{children}</>;

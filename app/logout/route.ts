@@ -1,16 +1,14 @@
-import { auth, getKeycloakIdToken, getServerSession } from "@/lib/auth";
+import { auth, backchannelKeycloakLogout, getServerSession } from "@/lib/auth";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  let idToken: string | null = null;
-
   try {
     const session = await getServerSession(request.headers);
     if (session?.user?.id) {
-      idToken = await getKeycloakIdToken(session.user.id, request.headers);
+      await backchannelKeycloakLogout(session.user.id);
     }
   } catch (error) {
-    console.error("Error reading session before logout:", error);
+    console.error("Error performing backchannel logout:", error);
   }
 
   // Clear the local session in better-auth
@@ -22,22 +20,12 @@ export async function GET(request: NextRequest) {
     console.error("Error signing out better-auth session:", error);
   }
 
-  const keycloakIssuer = process.env.KEYCLOAK_ISSUER || "https://auth.quizzy.it.com/realms/phsardigital";
-  const keycloakClientId = process.env.KEYCLOAK_CLIENT_ID || "phsardigital-admin";
   const forwardedHost = request.headers.get("x-forwarded-host");
   const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
   const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.nextUrl.origin;
-  const postLogoutRedirectUri = `${origin}/login?logged_out=true`;
+  const loginUrl = `${origin}/login?logged_out=true`;
 
-  const logoutUrl = new URL(`${keycloakIssuer}/protocol/openid-connect/logout`);
-  logoutUrl.searchParams.set("client_id", keycloakClientId);
-  logoutUrl.searchParams.set("post_logout_redirect_uri", postLogoutRedirectUri);
-
-  if (idToken) {
-    logoutUrl.searchParams.set("id_token_hint", idToken);
-  }
-
-  const response = NextResponse.redirect(logoutUrl.toString(), { status: 302 });
+  const response = NextResponse.redirect(loginUrl, { status: 302 });
 
   // Explicitly expire and delete all session and auth cookies
   for (const cookie of request.cookies.getAll()) {
@@ -51,4 +39,3 @@ export async function GET(request: NextRequest) {
 
   return response;
 }
-

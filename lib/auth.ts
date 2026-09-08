@@ -322,6 +322,108 @@ export async function getKeycloakIdToken(userId: string, headers?: Headers): Pro
 }
 
 /**
+ * Perform server-side backchannel logout and token revocation with Keycloak.
+ * Avoids browser redirect crashes when external IdPs (like Google) fail Single Logout.
+ */
+export async function backchannelKeycloakLogout(userId: string): Promise<void> {
+  const issuer = process.env.KEYCLOAK_ISSUER;
+  const clientId = process.env.KEYCLOAK_CLIENT_ID;
+  const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
+
+  if (!issuer || !clientId) return;
+
+  try {
+    const row = db
+      .prepare(
+        "select accessToken, refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+      )
+      .get(userId) as { accessToken: string | null; refreshToken: string | null } | undefined;
+
+    const tokenEndpoint = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/logout`;
+    const revokeEndpoint = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/revoke`;
+
+    if (row?.refreshToken) {
+      try {
+        const body = new URLSearchParams({
+          client_id: clientId,
+          ...(clientSecret ? { client_secret: clientSecret } : {}),
+          refresh_token: row.refreshToken,
+        });
+        await fetch(tokenEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+          cache: "no-store",
+        });
+      } catch (err) {
+        console.warn("[auth] Keycloak backchannel logout error:", err);
+      }
+
+      try {
+        const body = new URLSearchParams({
+          client_id: clientId,
+          ...(clientSecret ? { client_secret: clientSecret } : {}),
+          token: row.refreshToken,
+          token_type_hint: "refresh_token",
+        });
+        await fetch(revokeEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+          cache: "no-store",
+        });
+      } catch (err) {
+        console.warn("[auth] Keycloak refresh token revoke error:", err);
+      }
+    }
+
+    if (row?.accessToken) {
+      try {
+        const body = new URLSearchParams({
+          client_id: clientId,
+          ...(clientSecret ? { client_secret: clientSecret } : {}),
+          token: row.accessToken,
+          token_type_hint: "access_token",
+        });
+        await fetch(revokeEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+          cache: "no-store",
+        });
+      } catch (err) {
+        console.warn("[auth] Keycloak access token revoke error:", err);
+      }
+    }
+
+    // Clear stored tokens in SQLite for this user
+    try {
+      db.prepare(`
+        UPDATE account
+        SET accessToken = null,
+            refreshToken = null,
+            idToken = null,
+            accessTokenExpiresAt = null,
+            updatedAt = ?
+        WHERE userId = ? AND providerId = 'keycloak'
+      `).run(new Date().toISOString(), userId);
+
+      db.prepare(`
+        UPDATE "user"
+        SET accessToken = '',
+            idToken = '',
+            updatedAt = ?
+        WHERE id = ?
+      `).run(new Date().toISOString(), userId);
+    } catch (dbErr) {
+      console.warn("[auth] Error clearing account tokens in SQLite:", dbErr);
+    }
+  } catch (err) {
+    console.error("[auth] Error during backchannel Keycloak logout:", err);
+  }
+}
+
+/**
  * Refreshes an expired Keycloak access token using the stored refresh token.
  * Updates both the `account` and `user` tables upon successful refresh.
  */
