@@ -141,7 +141,7 @@ function extractRealmRoles(claims: Record<string, unknown>): string[] {
   );
 }
 
-function isTokenExpired(token?: string): boolean {
+export function isTokenExpired(token?: string): boolean {
   if (!token) return true;
   const claims = decodeJwtPayload(token);
   if (!claims.exp || typeof claims.exp !== "number") return false;
@@ -325,7 +325,10 @@ export async function getKeycloakIdToken(userId: string, headers?: Headers): Pro
  * Perform server-side backchannel logout and token revocation with Keycloak.
  * Avoids browser redirect crashes when external IdPs (like Google) fail Single Logout.
  */
-export async function backchannelKeycloakLogout(userId: string): Promise<void> {
+export async function backchannelKeycloakLogout(
+  userId?: string,
+  tokens?: { accessToken?: string | null; refreshToken?: string | null },
+): Promise<void> {
   const issuer = process.env.KEYCLOAK_ISSUER;
   const clientId = process.env.KEYCLOAK_CLIENT_ID;
   const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET;
@@ -333,21 +336,30 @@ export async function backchannelKeycloakLogout(userId: string): Promise<void> {
   if (!issuer || !clientId) return;
 
   try {
-    const row = db
-      .prepare(
-        "select accessToken, refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
-      )
-      .get(userId) as { accessToken: string | null; refreshToken: string | null } | undefined;
+    let accessToken = tokens?.accessToken;
+    let refreshToken = tokens?.refreshToken;
+
+    if (!refreshToken && userId) {
+      try {
+        const row = db
+          .prepare(
+            "select accessToken, refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
+          )
+          .get(userId) as { accessToken: string | null; refreshToken: string | null } | undefined;
+        accessToken = row?.accessToken || accessToken;
+        refreshToken = row?.refreshToken || refreshToken;
+      } catch {}
+    }
 
     const tokenEndpoint = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/logout`;
     const revokeEndpoint = `${issuer.replace(/\/$/, "")}/protocol/openid-connect/revoke`;
 
-    if (row?.refreshToken) {
+    if (refreshToken) {
       try {
         const body = new URLSearchParams({
           client_id: clientId,
           ...(clientSecret ? { client_secret: clientSecret } : {}),
-          refresh_token: row.refreshToken,
+          refresh_token: refreshToken,
         });
         await fetch(tokenEndpoint, {
           method: "POST",
@@ -363,7 +375,7 @@ export async function backchannelKeycloakLogout(userId: string): Promise<void> {
         const body = new URLSearchParams({
           client_id: clientId,
           ...(clientSecret ? { client_secret: clientSecret } : {}),
-          token: row.refreshToken,
+          token: refreshToken,
           token_type_hint: "refresh_token",
         });
         await fetch(revokeEndpoint, {
@@ -377,12 +389,12 @@ export async function backchannelKeycloakLogout(userId: string): Promise<void> {
       }
     }
 
-    if (row?.accessToken) {
+    if (accessToken) {
       try {
         const body = new URLSearchParams({
           client_id: clientId,
           ...(clientSecret ? { client_secret: clientSecret } : {}),
-          token: row.accessToken,
+          token: accessToken,
           token_type_hint: "access_token",
         });
         await fetch(revokeEndpoint, {
@@ -397,26 +409,28 @@ export async function backchannelKeycloakLogout(userId: string): Promise<void> {
     }
 
     // Clear stored tokens in SQLite for this user
-    try {
-      db.prepare(`
-        UPDATE account
-        SET accessToken = null,
-            refreshToken = null,
-            idToken = null,
-            accessTokenExpiresAt = null,
-            updatedAt = ?
-        WHERE userId = ? AND providerId = 'keycloak'
-      `).run(new Date().toISOString(), userId);
+    if (userId) {
+      try {
+        db.prepare(`
+          UPDATE account
+          SET accessToken = null,
+              refreshToken = null,
+              idToken = null,
+              accessTokenExpiresAt = null,
+              updatedAt = ?
+          WHERE userId = ? AND providerId = 'keycloak'
+        `).run(new Date().toISOString(), userId);
 
-      db.prepare(`
-        UPDATE "user"
-        SET accessToken = '',
-            idToken = '',
-            updatedAt = ?
-        WHERE id = ?
-      `).run(new Date().toISOString(), userId);
-    } catch (dbErr) {
-      console.warn("[auth] Error clearing account tokens in SQLite:", dbErr);
+        db.prepare(`
+          UPDATE "user"
+          SET accessToken = '',
+              idToken = '',
+              updatedAt = ?
+          WHERE id = ?
+        `).run(new Date().toISOString(), userId);
+      } catch (dbErr) {
+        console.warn("[auth] Error clearing account tokens in SQLite:", dbErr);
+      }
     }
   } catch (err) {
     console.error("[auth] Error during backchannel Keycloak logout:", err);
