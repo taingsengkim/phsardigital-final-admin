@@ -74,7 +74,9 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Welcome Back</h1>
           <p className="text-gray-500 font-medium">Log in to Phsar Digital Admin Panel</p>
-          <p className="mt-2 text-sm text-gray-400">Redirecting to Keycloak...</p>
+          {isLoading && (
+            <p className="mt-2 text-sm text-gray-400 animate-pulse">Redirecting to Keycloak...</p>
+          )}
         </div>
 
         <div className="space-y-6">

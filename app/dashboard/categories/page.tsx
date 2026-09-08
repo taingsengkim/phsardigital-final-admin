@@ -209,16 +209,24 @@ export default function CategoriesPage() {
     refetch,
   } = useGetCategoriesQuery();
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>();
+  const [selectedCategoryId, setSelectedCategoryId] = useState<
+    string | undefined
+  >();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [categoryToEdit, setCategoryToEdit] = useState<CategoryRecord | null>(null);
+  const [categoryToEdit, setCategoryToEdit] = useState<CategoryRecord | null>(
+    null,
+  );
   const [presetParentUuid, setPresetParentUuid] = useState<string | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = useState<CategoryRecord | null>(null);
+  const [categoryToDelete, setCategoryToDelete] =
+    useState<CategoryRecord | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const [createCategory, { isLoading: isCreating }] = useCreateCategoryMutation();
-  const [updateCategory, { isLoading: isUpdating }] = useUpdateCategoryMutation();
-  const [deleteCategory, { isLoading: isDeleting }] = useDeleteCategoryMutation();
+  const [createCategory, { isLoading: isCreating }] =
+    useCreateCategoryMutation();
+  const [updateCategory, { isLoading: isUpdating }] =
+    useUpdateCategoryMutation();
+  const [deleteCategory, { isLoading: isDeleting }] =
+    useDeleteCategoryMutation();
 
   const flattenedCategories = useMemo(
     () => flattenCategories(categories),
@@ -241,7 +249,9 @@ export default function CategoriesPage() {
 
   const subcategoriesOfSelected = useMemo(() => {
     if (!selectedCategory) return [];
-    return flattenedCategories.filter((cat) => cat.parentId === selectedCategory.id);
+    return flattenedCategories.filter(
+      (cat) => cat.parentId === selectedCategory.id,
+    );
   }, [flattenedCategories, selectedCategory]);
 
   const treeNodes = useMemo(
@@ -252,7 +262,9 @@ export default function CategoriesPage() {
   const directoryItems: CategoryDirectoryItem[] = useMemo(
     () =>
       flattenedCategories.map((category) => {
-        const parent = category.parentId ? categoriesById.get(category.parentId) : null;
+        const parent = category.parentId
+          ? categoriesById.get(category.parentId)
+          : null;
         return {
           id: category.id,
           name: category.name,
@@ -274,8 +286,12 @@ export default function CategoriesPage() {
 
   // Key KPI stats
   const totalCategories = flattenedCategories.length;
-  const rootCategoriesCount = flattenedCategories.filter((c) => !c.parentId).length;
-  const subcategoriesCount = flattenedCategories.filter((c) => Boolean(c.parentId)).length;
+  const rootCategoriesCount = flattenedCategories.filter(
+    (c) => !c.parentId,
+  ).length;
+  const subcategoriesCount = flattenedCategories.filter((c) =>
+    Boolean(c.parentId),
+  ).length;
   const activeCategoriesCount = flattenedCategories.filter(
     (c) => c.status.toLowerCase() === "active",
   ).length;
@@ -302,7 +318,10 @@ export default function CategoriesPage() {
   ) => {
     try {
       if (editId) {
-        const updated = await updateCategory({ id: editId, data: payload }).unwrap();
+        const updated = await updateCategory({
+          id: editId,
+          data: payload,
+        }).unwrap();
         showToast({
           type: "success",
           title: "Category Updated",
@@ -382,7 +401,8 @@ export default function CategoriesPage() {
                 Category & Schema Directory
               </h2>
               <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">
-                Organize the marketplace hierarchy, manage subcategories, and configure specification schemas
+                Organize the marketplace hierarchy, manage subcategories, and
+                configure specification schemas
               </p>
             </div>
             <button
@@ -437,6 +457,7 @@ export default function CategoriesPage() {
               iconBgColor="bg-white"
               iconColor="text-emerald-600"
             />
+
             <StatsCard
               title="TOTAL LISTINGS"
               value={isLoading ? "..." : totalListings.toLocaleString()}
@@ -453,7 +474,9 @@ export default function CategoriesPage() {
             }`}
           >
             {/* Left Column: Hierarchy Tree */}
-            <div className={selectedCategory ? "xl:col-span-4" : "lg:col-span-4"}>
+            <div
+              className={selectedCategory ? "xl:col-span-4" : "lg:col-span-4"}
+            >
               <div className="sticky top-6">
                 <CategoryHierarchy
                   nodes={treeNodes}
@@ -470,7 +493,9 @@ export default function CategoriesPage() {
             {/* Middle Column: Category Directory Table */}
             <div
               className={
-                selectedCategory ? "xl:col-span-8 space-y-8" : "lg:col-span-8 space-y-8"
+                selectedCategory
+                  ? "xl:col-span-8 space-y-8"
+                  : "lg:col-span-8 space-y-8"
               }
             >
               <CategoryDirectory
