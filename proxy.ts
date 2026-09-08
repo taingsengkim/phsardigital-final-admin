@@ -32,10 +32,10 @@ function cleanCookieHeader(cookieHeader: string): string {
     .map((c) => c.trim())
     .filter(
       (c) =>
-        !c.startsWith("better-auth.session_data") &&
         !c.startsWith("better-auth.account_data") &&
-        !c.startsWith("__Secure-better-auth.session_data") &&
-        !c.startsWith("__Secure-better-auth.account_data"),
+        !c.startsWith("__Secure-better-auth.account_data") &&
+        !/\.session_data\.\d+/.test(c) &&
+        !/\.account_data\.\d+/.test(c),
     )
     .join("; ");
 }
@@ -43,10 +43,10 @@ function cleanCookieHeader(cookieHeader: string): string {
 function expireStaleBloatedCookies(response: NextResponse, request: NextRequest) {
   for (const cookie of request.cookies.getAll()) {
     if (
-      cookie.name.startsWith("better-auth.session_data") ||
       cookie.name.startsWith("better-auth.account_data") ||
-      cookie.name.startsWith("__Secure-better-auth.session_data") ||
-      cookie.name.startsWith("__Secure-better-auth.account_data")
+      cookie.name.startsWith("__Secure-better-auth.account_data") ||
+      /\.session_data\.\d+/.test(cookie.name) ||
+      /\.account_data\.\d+/.test(cookie.name)
     ) {
       response.cookies.delete(cookie.name);
       response.cookies.set(cookie.name, "", { maxAge: 0, path: "/" });
@@ -116,12 +116,15 @@ export async function proxy(request: NextRequest) {
     // Let request proceed so DashboardLayout can refresh token if needed
   }
 
-  // On login page: redirect away ONLY if session exists AND token is not expired
-  if (isLoginPage && session) {
-    if (!hasExpiredToken) {
+  // On login page: redirect away ONLY if session exists AND token is not expired,
+  // but stay on login if user explicitly logged out or encountered an error.
+  if (isLoginPage) {
+    if (hasLoggedOutParam || request.nextUrl.searchParams.has("error") || request.nextUrl.searchParams.has("error_description")) {
+      return withCookieCleanup(NextResponse.next());
+    }
+    if (session && !hasExpiredToken) {
       return withCookieCleanup(NextResponse.redirect(new URL(admin ? "/dashboard" : "/forbidden", request.url)));
     }
-    // If token is expired, stay on login page!
     return withCookieCleanup(NextResponse.next());
   }
 
