@@ -114,8 +114,14 @@ async function handleLogout(request: NextRequest) {
     "__Host-better-auth.session_token",
   ];
 
+  // Clear-Site-Data header tells browsers to clear all stored cookies and local storage
+  response.headers.set("Clear-Site-Data", '"cookies", "storage"');
+
   for (const name of sessionCookieNames) {
     response.cookies.set(name, "", { maxAge: 0, path: "/" });
+    for (let i = 0; i < 10; i++) {
+      response.cookies.set(`${name}.${i}`, "", { maxAge: 0, path: "/" });
+    }
   }
 
   // Set logged_out indicator cookie for 60 seconds so login page shows signout message

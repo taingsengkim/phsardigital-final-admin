@@ -185,12 +185,11 @@ export const auth = betterAuth({
     process.env.AUTH_SECRET ||
     "pWGg2GuYg9Xgc6GnGwBONAUmnhyyOqio6+qwFymZfgQ=",
   account: {
-    storeAccountCookie: true,
+    storeAccountCookie: false,
   },
   session: {
     cookieCache: {
-      enabled: true,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      enabled: false,
     },
   },
   trustedOrigins: [
@@ -212,21 +211,6 @@ export const auth = betterAuth({
     additionalFields: {
       // Comma-separated Keycloak realm roles, e.g. "ADMIN,SELLER".
       roles: {
-        type: "string",
-        required: false,
-        defaultValue: "",
-      },
-      accessToken: {
-        type: "string",
-        required: false,
-        defaultValue: "",
-      },
-      idToken: {
-        type: "string",
-        required: false,
-        defaultValue: "",
-      },
-      refreshToken: {
         type: "string",
         required: false,
         defaultValue: "",
@@ -261,6 +245,24 @@ export const auth = betterAuth({
             const sub = typeof claims.sub === "string" ? claims.sub : null;
             if (!sub) return null;
 
+            // Persist tokens securely in SQLite account table (never in browser cookies)
+            try {
+              db.prepare(`
+                UPDATE account
+                SET accessToken = coalesce(?, accessToken),
+                    refreshToken = coalesce(?, refreshToken),
+                    idToken = coalesce(?, idToken),
+                    updatedAt = ?
+                WHERE userId = ? AND providerId = 'keycloak'
+              `).run(
+                tokens.accessToken || null,
+                tokens.refreshToken || null,
+                tokens.idToken || null,
+                new Date().toISOString(),
+                sub,
+              );
+            } catch {}
+
             const name =
               (typeof claims.name === "string" && claims.name) ||
               (typeof claims.preferred_username === "string" && claims.preferred_username) ||
@@ -273,9 +275,6 @@ export const auth = betterAuth({
               email: typeof claims.email === "string" ? claims.email : undefined,
               emailVerified: claims.email_verified === true,
               image: typeof claims.picture === "string" ? claims.picture : undefined,
-              accessToken: tokens.accessToken || "",
-              idToken: tokens.idToken || "",
-              refreshToken: tokens.refreshToken || "",
               roles: serializeRoles([
                 ...extractRealmRoles(accessClaims),
                 ...extractRealmRoles(idClaims),
@@ -288,14 +287,8 @@ export const auth = betterAuth({
             const p = profile as Record<string, unknown>;
             const mapped: Partial<User> & {
               roles: string;
-              accessToken?: string;
-              idToken?: string;
-              refreshToken?: string;
             } = {
               roles: typeof p.roles === "string" ? p.roles : "",
-              accessToken: typeof p.accessToken === "string" ? p.accessToken : "",
-              idToken: typeof p.idToken === "string" ? p.idToken : "",
-              refreshToken: typeof p.refreshToken === "string" ? p.refreshToken : "",
             };
             return mapped;
           },
@@ -309,30 +302,30 @@ export const auth = betterAuth({
  * Look up the Keycloak id_token for a user so logout can send id_token_hint.
  */
 export async function getKeycloakIdToken(userId?: string, headers?: Headers): Promise<string | null> {
-  if (headers) {
+  let uid = userId;
+  if (!uid && headers) {
     try {
       const session = await getServerSession(headers);
-      const user = session?.user as (User & { idToken?: string }) | undefined;
-      if (user?.idToken) return user.idToken;
+      uid = session?.user?.id;
     } catch {
-      // fallback to DB
+      // fallback
     }
   }
 
-  if (!userId) return null;
+  if (!uid) return null;
 
   try {
     const row = db
       .prepare(
         "select idToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
       )
-      .get(userId) as { idToken: string | null } | undefined;
+      .get(uid) as { idToken: string | null } | undefined;
 
     if (row?.idToken) return row.idToken;
 
     const userRow = db
       .prepare("select idToken from user where id = ?")
-      .get(userId) as { idToken: string | null } | undefined;
+      .get(uid) as { idToken: string | null } | undefined;
 
     return userRow?.idToken ?? null;
   } catch {
@@ -344,30 +337,30 @@ export async function getKeycloakIdToken(userId?: string, headers?: Headers): Pr
  * Look up the Keycloak refresh_token for a user so backchannel logout can revoke the session.
  */
 export async function getKeycloakRefreshToken(userId?: string, headers?: Headers): Promise<string | null> {
-  if (headers) {
+  let uid = userId;
+  if (!uid && headers) {
     try {
       const session = await getServerSession(headers);
-      const user = session?.user as (User & { refreshToken?: string }) | undefined;
-      if (user?.refreshToken) return user.refreshToken;
+      uid = session?.user?.id;
     } catch {
-      // fallback to DB
+      // fallback
     }
   }
 
-  if (!userId) return null;
+  if (!uid) return null;
 
   try {
     const row = db
       .prepare(
         "select refreshToken from account where userId = ? and providerId = 'keycloak' order by updatedAt desc limit 1",
       )
-      .get(userId) as { refreshToken: string | null } | undefined;
+      .get(uid) as { refreshToken: string | null } | undefined;
 
     if (row?.refreshToken) return row.refreshToken;
 
     const userRow = db
       .prepare("select refreshToken from user where id = ?")
-      .get(userId) as { refreshToken: string | null } | undefined;
+      .get(uid) as { refreshToken: string | null } | undefined;
 
     return userRow?.refreshToken ?? null;
   } catch {
