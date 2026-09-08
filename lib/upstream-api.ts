@@ -14,12 +14,6 @@ export async function proxyUpstreamRequest(
 
   try {
     const authHeaders = await getAuthHeader(request)
-    if (!authHeaders.Authorization) {
-      return NextResponse.json(
-        { message: "Your session has expired. Please sign in again.", code: "SESSION_EXPIRED" },
-        { status: 401 },
-      )
-    }
     const requestContentType = request.headers.get("content-type")
     const requestBody = ["POST", "PATCH", "PUT"].includes(method)
       ? await request.text().catch(() => null)

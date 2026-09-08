@@ -181,6 +181,9 @@ export const auth = betterAuth({
     process.env.BETTER_AUTH_SECRET ||
     process.env.AUTH_SECRET ||
     "pWGg2GuYg9Xgc6GnGwBONAUmnhyyOqio6+qwFymZfgQ=",
+  account: {
+    storeAccountCookie: true,
+  },
   session: {
     cookieCache: {
       enabled: true,
@@ -209,19 +212,16 @@ export const auth = betterAuth({
         type: "string",
         required: false,
         defaultValue: "",
-        input: false,
       },
       accessToken: {
         type: "string",
         required: false,
         defaultValue: "",
-        input: false,
       },
       idToken: {
         type: "string",
         required: false,
         defaultValue: "",
-        input: false,
       },
     },
   },
@@ -581,18 +581,6 @@ export async function requireAdmin(request: Request): Promise<Response | null> {
     );
   }
 
-  // Verify that the user has an active, valid Keycloak token or can refresh it
-  const authHeaders = await getAuthHeader(request);
-  if (!authHeaders.Authorization) {
-    return NextResponse.json(
-      {
-        message: "Your session has expired. Please sign in again.",
-        code: "SESSION_EXPIRED",
-      },
-      { status: 401 },
-    );
-  }
-
   return null;
 }
 
@@ -605,20 +593,36 @@ export async function getAuthHeader(request: Request): Promise<Record<string, st
     if (!isTokenExpired(token)) {
       return { Authorization: incomingAuth };
     }
-    console.warn("[auth] Incoming Authorization header token is expired. Falling back to session token...");
   }
 
   try {
+    // 1. Better-Auth getAccessToken reads the account_data cookie (works across all serverless containers)
+    try {
+      const token = await auth.api.getAccessToken({
+        headers: request.headers,
+        body: { providerId: "keycloak" },
+      });
+      if (token?.accessToken && !isTokenExpired(token.accessToken)) {
+        return { Authorization: `Bearer ${token.accessToken}` };
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Check session user accessToken (from session_data cookie cache)
     const session = await getServerSession(request.headers);
     const user = session?.user as (User & { accessToken?: string; id?: string }) | undefined;
 
-    if (!user?.id) {
-      return {};
+    if (user?.accessToken && !isTokenExpired(user.accessToken)) {
+      return { Authorization: `Bearer ${user.accessToken}` };
     }
 
-    const validToken = await getValidKeycloakTokenForUser(user.id, user.accessToken);
-    if (validToken) {
-      return { Authorization: `Bearer ${validToken}` };
+    // 3. Fallback: query database for account and attempt refresh if needed
+    if (user?.id) {
+      const validToken = await getValidKeycloakTokenForUser(user.id, user.accessToken);
+      if (validToken) {
+        return { Authorization: `Bearer ${validToken}` };
+      }
     }
   } catch (err) {
     console.error("Error retrieving or refreshing the Keycloak access token:", err);
