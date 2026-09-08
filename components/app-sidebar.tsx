@@ -23,7 +23,6 @@ import {
   ShoppingBagIcon,
   BellIcon,
   BarChart3Icon,
-  PieChartIcon,
   SettingsIcon,
   ArrowRightIcon,
   ShieldIcon,
@@ -54,7 +53,6 @@ const navMainConfigs: NavItemConfig[] = [
   { key: "navPurchases", url: "/dashboard/purchases", icon: <ShoppingBagIcon /> },
   { key: "navNotifications", url: "/dashboard/notifications", icon: <BellIcon /> },
   { key: "navReports", url: "/dashboard/reports", icon: <BarChart3Icon /> },
-  { key: "navAnalytics", url: "/dashboard/analytics", icon: <PieChartIcon /> },
   { key: "navSettings", url: "#", icon: <SettingsIcon /> },
 ]
 

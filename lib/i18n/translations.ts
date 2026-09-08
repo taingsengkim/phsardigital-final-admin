@@ -19,7 +19,6 @@ export const translations = {
     navPurchases: "Purchases",
     navNotifications: "Notifications",
     navReports: "Reports",
-    navAnalytics: "Analytics",
     navSettings: "Settings",
 
     // Common Actions & Filters
@@ -89,7 +88,6 @@ export const translations = {
     navPurchases: "ការទិញ",
     navNotifications: "ការជូនដំណឹង",
     navReports: "របាយការណ៍",
-    navAnalytics: "វិភាគទិន្នន័យ",
     navSettings: "ការកំណត់",
 
     // Common Actions & Filters
